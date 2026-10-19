@@ -1,0 +1,12 @@
+{
+  "name": "Fessiers aux haltères",
+  "short_name": "Fessiers",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#fbf6f8",
+  "theme_color": "#c2477a",
+  "icons": [
+    { "src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
