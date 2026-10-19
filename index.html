@@ -74,6 +74,8 @@
   ol.exercises b { font-size: 1rem; }
   ol.exercises .en { color: var(--muted); font-size: .82rem; }
   ol.exercises p { margin: 4px 0 0; font-size: .88rem; color: var(--muted); }
+  .shot { display: block; width: 100%; max-width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 10px; background: var(--line); margin-bottom: 10px; }
+  .watch { display: inline-block; margin-top: 8px; font-size: .85rem; font-weight: 600; text-decoration: none; }
 
   .rounds { display: grid; gap: 8px; }
   .round { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; }
@@ -124,7 +126,10 @@
   .p-name { font-size: 1.8rem; font-weight: 800; line-height: 1.1; letter-spacing: -.02em; text-wrap: balance; margin: 0; }
   .p-en { color: var(--muted); font-size: .9rem; margin-top: -6px; }
   .p-mode { font-weight: 700; color: var(--phase); }
-  .ring { position: relative; width: min(62vw, 260px); aspect-ratio: 1; max-width: 100%; }
+  .ring { position: relative; width: min(62vw, 260px, 34vh); aspect-ratio: 1; max-width: 100%; }
+  #player.has-shot .ring { width: min(44vw, 190px, 24vh); }
+  #player.has-shot .ring .t { font-size: clamp(2.4rem, 12vw, 3.6rem); }
+  .p-shot { width: 100%; max-width: 420px; aspect-ratio: 16 / 9; height: auto; max-height: 26vh; object-fit: cover; border-radius: 14px; background: var(--line); }
   .ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
   .ring circle { fill: none; stroke-width: 10; }
   .ring .track { stroke: var(--line); }
@@ -199,6 +204,7 @@
     <div class="bar"><div id="p-bar"></div></div>
 
     <div class="p-main" id="p-main">
+      <img class="p-shot" id="p-shot" alt="" hidden>
       <div class="phase" id="p-phase">EFFORT</div>
       <h2 class="p-name" id="p-name" style="text-transform:none;letter-spacing:-.02em;color:var(--text)"></h2>
       <div class="p-en" id="p-en"></div>
@@ -244,19 +250,28 @@
 </div>
 
 <script>
-// ---------- Workout (from the video description) ----------
+// ---------- Workout (from the video description and chapters) ----------
+const VIDEO = "https://www.youtube.com/watch?v=VjGOiFr5oAk";
+// Chapter thumbnails from the video (YouTube-hosted). The first squat has no chapter of its own.
+const IMG = {
+  sumo: "https://i.ytimg.com/vi/VjGOiFr5oAk/hqdefault_392900.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLD1P9VNtpg7fhR7An-TnAD8IydeIA",
+  sumodl: "https://i.ytimg.com/vi/VjGOiFr5oAk/hqdefault_577900.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLCuPheIJICWuPhrpVrTYoRn4JH7kQ",
+  rdl: "https://i.ytimg.com/vi/VjGOiFr5oAk/hqdefault_752000.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLAro3jCZ9P9PHp7O_3YhBVG2kCU8g",
+  lunge: "https://i.ytimg.com/vi/VjGOiFr5oAk/hqdefault_939900.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLDXQXbFUa5tUZtqyoTk4yOe9-_YmA",
+  bridge: "https://i.ytimg.com/vi/VjGOiFr5oAk/hqdefault_1114000.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLDHOAmCJh877h08l6T08RjDonpOOQ",
+};
 const EXERCISES = [
-  { name: "Squat", en: "High squat",
+  { name: "Squat", en: "High squat", t: 192,
     cue: "Pieds largeur d'épaules, haltères aux épaules. Descends en poussant les hanches vers l'arrière, remonte en poussant dans les talons." },
-  { name: "Squat sumo bas", en: "Low sumo squat",
+  { name: "Squat sumo bas", en: "Low sumo squat", t: 372, img: IMG.sumo,
     cue: "Pieds très écartés, pointes vers l'extérieur, un haltère tenu entre les jambes. Descends bas, genoux dans l'axe des pieds." },
-  { name: "Soulevé de terre sumo", en: "Sumo squat deadlift",
+  { name: "Soulevé de terre sumo", en: "Sumo squat deadlift", t: 552, img: IMG.sumodl,
     cue: "Position sumo, haltère jusqu'au sol, dos plat. Remonte en serrant fort les fessiers en haut." },
-  { name: "Soulevé de terre roumain", en: "Romanian deadlift",
+  { name: "Soulevé de terre roumain", en: "Romanian deadlift", t: 732, img: IMG.rdl,
     cue: "Genoux légèrement fléchis, pousse les hanches loin derrière, haltères le long des jambes. Sens l'étirement des ischios, dos plat." },
-  { name: "Fente latérale alternée", en: "Side to side lunge",
+  { name: "Fente latérale alternée", en: "Side to side lunge", t: 912, img: IMG.lunge,
     cue: "Grand pas sur le côté, hanches vers l'arrière, genou au-dessus du pied. Pousse dans le talon pour revenir, puis change de côté." },
-  { name: "Pont fessier", en: "Glute bridge",
+  { name: "Pont fessier", en: "Glute bridge", t: 1092, img: IMG.bridge,
     cue: "Sur le dos, haltère sur les hanches. Pousse dans les talons et serre les fessiers en haut, sans cambrer le bas du dos." },
 ];
 const ROUNDS = [
@@ -380,6 +395,10 @@ function enterStep() {
   $("#p-phase").textContent = { prep: "PRÊTE ?", work: "EFFORT", rest: "REPOS" }[s.kind];
   $("#p-name").textContent = (s.kind === "work" ? "" : "Ensuite : ") + ex.name;
   $("#p-en").textContent = ex.en;
+  const shot = $("#p-shot");
+  if (ex.img) { shot.src = ex.img; shot.alt = ex.name; shot.hidden = false; } else shot.hidden = true;
+  shot.onerror = () => { shot.hidden = true; player.classList.remove("has-shot"); };
+  player.classList.toggle("has-shot", !!ex.img);
   $("#p-mode").textContent = `Tour ${s.round + 1}/3 · ${rd.label}`;
   $("#p-cue").textContent = s.kind === "work" ? rd.hint : ex.cue;
   $("#p-where").textContent = `Exercice ${s.ex + 1}/${EXERCISES.length} · tour ${s.round + 1}/3`;
@@ -434,7 +453,7 @@ function finish() {
   $("#p-main").hidden = true;
   $("#p-ctrls").hidden = true;
   $("#done").hidden = false;
-  $("#player").classList.remove("rest", "prep");
+  $("#player").classList.remove("rest", "prep", "has-shot");
   $("#p-bar").style.width = "100%";
   $("#p-left").textContent = "0:00";
   $("#p-where").textContent = "Terminé";
@@ -519,8 +538,11 @@ function renderHome() {
   });
 }
 
-$("#ex-list").innerHTML = EXERCISES.map((e, i) =>
-  `<li><div class="top"><span class="n">${i + 1}</span><div><b>${e.name}</b> <span class="en">· ${e.en}</span></div></div><p>${e.cue}</p></li>`).join("");
+$("#ex-list").innerHTML = EXERCISES.map((e, i) => `<li>
+  ${e.img ? `<img class="shot" src="${e.img}" alt="${e.name} dans la vidéo" loading="lazy" onerror="this.remove()">` : ""}
+  <div class="top"><span class="n">${i + 1}</span><div><b>${e.name}</b> <span class="en">· ${e.en}</span></div></div>
+  <p>${e.cue}</p>
+  <a class="watch" href="${VIDEO}&t=${e.t}s" target="_blank" rel="noopener">▶ Voir dans la vidéo (${fmtClock(e.t)})</a></li>`).join("");
 $("#rounds").innerHTML = ROUNDS.map((r, i) =>
   `<div class="round"><span class="k">${i + 1}</span><b>${r.label}</b><span>${r.hint}</span></div>`).join("");
 
