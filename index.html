@@ -19,9 +19,10 @@
     --ok: #2f8f68;
     --ok-soft: #dcf1e7;
     --shadow: 0 1px 3px rgba(60, 20, 40, .08);
+    --overlay: rgba(20, 10, 16, .45);
   }
   @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-theme="light"]) {
       --bg: #17121a;
       --card: #221b25;
       --text: #f3eaf0;
@@ -32,10 +33,25 @@
       --ok: #5cc99a;
       --ok-soft: #1d3a2e;
       --shadow: none;
+      color-scheme: dark;
     }
+  }
+  :root[data-theme="dark"] {
+      --bg: #17121a;
+      --card: #221b25;
+      --text: #f3eaf0;
+      --muted: #a8939f;
+      --line: #3a2f3d;
+      --accent: #ec79a7;
+      --accent-soft: #3d2332;
+      --ok: #5cc99a;
+      --ok-soft: #1d3a2e;
+      --shadow: none;
+      color-scheme: dark;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; }
+  [hidden] { display: none !important; }
   body {
     background: var(--bg);
     color: var(--text);
@@ -44,12 +60,13 @@
     -webkit-tap-highlight-color: transparent;
   }
   header {
-    padding: calc(16px + env(safe-area-inset-top)) 16px 8px;
+    padding-block: calc(16px + env(safe-area-inset-top)) 8px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
     max-width: 640px; margin: 0 auto;
   }
   header h1 { margin: 0; font-size: 1.5rem; letter-spacing: -.01em; }
   header p { margin: 2px 0 0; color: var(--muted); font-size: .9rem; }
-  main { max-width: 640px; margin: 0 auto; padding: 0 16px; }
+  main { max-width: 640px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
   .view { display: none; }
   .view.active { display: block; }
 
@@ -131,6 +148,12 @@
   .hist-item .s { font-size: .82rem; color: var(--muted); }
   .del { background: none; border: none; color: var(--muted); font-size: 1.1rem; }
 
+  #dialog { position: fixed; inset: 0; background: var(--overlay); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 30; }
+  #dialog .box { background: var(--card); color: var(--text); border-radius: 16px; padding: 18px; width: 100%; max-width: 360px; }
+  #dialog p { margin: 0 0 14px; }
+  #dialog .acts { display: flex; gap: 8px; justify-content: flex-end; }
+  #toast { position: fixed; left: 50%; top: calc(16px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); background: var(--ok); color: #fff;
+    padding: 10px 16px; border-radius: 12px; font-weight: 600; z-index: 40; max-width: calc(100% - 32px); text-align: center; }
   ul.tips { padding-left: 18px; margin: 6px 0 0; }
   ul.tips li { margin: 4px 0; }
   .progress { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; margin-top: 8px; }
@@ -207,6 +230,17 @@
     <button id="t-stop">✕</button>
   </div>
 </div>
+
+<div id="dialog" hidden role="dialog" aria-modal="true">
+  <div class="box">
+    <p id="dlg-msg"></p>
+    <div class="acts">
+      <button id="dlg-no" class="btn ghost">Annuler</button>
+      <button id="dlg-yes" class="btn">Confirmer</button>
+    </div>
+  </div>
+</div>
+<div id="toast" hidden></div>
 
 <nav>
   <div class="wrap">
@@ -285,6 +319,24 @@ function lastLoad(id) {
     if (v) return v;
   }
   return null;
+}
+
+// ---------- In-page dialogs (alert/confirm are blocked in some viewers) ----------
+function ask(msg, yes = "Confirmer") {
+  return new Promise(res => {
+    $("#dlg-msg").textContent = msg;
+    $("#dlg-yes").textContent = yes;
+    $("#dialog").hidden = false;
+    const close = v => { $("#dialog").hidden = true; res(v); };
+    $("#dlg-yes").onclick = () => close(true);
+    $("#dlg-no").onclick = () => close(false);
+  });
+}
+let toastT;
+function toast(msg) {
+  const t = $("#toast");
+  t.textContent = msg; t.hidden = false;
+  clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 2500);
 }
 
 // ---------- Sound / vibration ----------
@@ -444,11 +496,11 @@ function renderStats() {
   } else warn.hidden = true;
 }
 
-$("#finish").onclick = () => {
+$("#finish").onclick = async () => {
   const all = Object.values(state.current.done).flat();
   const n = all.filter(Boolean).length;
-  if (n === 0) { alert("Coche au moins une série avant de terminer."); return; }
-  if (n < all.length && !confirm(`${n}/${all.length} séries faites. Enregistrer quand même ?`)) return;
+  if (n === 0) { toast("Coche au moins une série avant de terminer."); return; }
+  if (n < all.length && !(await ask(`${n}/${all.length} séries faites. Enregistrer quand même ?`, "Enregistrer"))) return;
   state.history.push({
     date: Date.now(),
     sets: n, total: all.length,
@@ -457,7 +509,7 @@ $("#finish").onclick = () => {
   state.current = freshSession();
   save(); stopTimer(); render(); renderHistory();
   window.scrollTo({ top: 0, behavior: "smooth" });
-  alert("Bravo ! Séance enregistrée 💪");
+  toast("Bravo ! Séance enregistrée 💪");
 };
 
 // ---------- History ----------
@@ -499,7 +551,7 @@ function renderHistory() {
       <div class="s">${h.sets}/${h.total} séries${loads ? " · " + loads : ""}</div></div>`;
     const del = document.createElement("button");
     del.className = "del"; del.textContent = "🗑"; del.setAttribute("aria-label", "Supprimer");
-    del.onclick = () => { if (confirm("Supprimer cette séance ?")) { state.history.splice(idx, 1); save(); renderHistory(); renderStats(); } };
+    del.onclick = async () => { if (await ask("Supprimer cette séance ?", "Supprimer")) { state.history.splice(idx, 1); save(); renderHistory(); renderStats(); } };
     row.appendChild(del);
     list.appendChild(row);
   });
@@ -511,8 +563,8 @@ restInp.value = state.settings.rest;
 autoInp.checked = state.settings.autoRest;
 restInp.onchange = () => { state.settings.rest = Math.min(300, Math.max(15, +restInp.value || 75)); restInp.value = state.settings.rest; save(); };
 autoInp.onchange = () => { state.settings.autoRest = autoInp.checked; save(); };
-$("#reset-all").onclick = () => {
-  if (confirm("Effacer tout l'historique et la séance en cours ?")) {
+$("#reset-all").onclick = async () => {
+  if (await ask("Effacer tout l'historique et la séance en cours ?", "Effacer")) {
     state.history = []; state.current = freshSession(); save(); render(); renderHistory();
   }
 };
