@@ -179,6 +179,9 @@
     <div class="hist" id="hist"></div>
   </div>
 
+  <h2 id="warm-title">Échauffement · 4 min, sans poids</h2>
+  <ol class="exercises" id="warm-list"></ol>
+
   <h2>Les 6 exercices</h2>
   <ol class="exercises" id="ex-list"></ol>
 
@@ -189,6 +192,7 @@
   <div class="card settings">
     <div class="row"><label for="set-work">Effort (secondes)</label><input id="set-work" type="number" min="15" max="120" step="5"></div>
     <div class="row"><label for="set-rest">Repos (secondes)</label><input id="set-rest" type="number" min="5" max="120" step="5"></div>
+    <div class="row"><label for="set-warm">Échauffement avant la séance</label><input id="set-warm" type="checkbox"></div>
     <div class="row"><label for="set-voice">Annonces vocales</label><input id="set-voice" type="checkbox"></div>
     <div class="muted">L'écran reste allumé pendant la séance quand ton téléphone le permet.</div>
   </div>
@@ -275,6 +279,20 @@ const ROUNDS = [
   { label: "5 pulsations + 1 rép", say: "cinq pulsations, une répétition", hint: "5 petites pulsations en bas, puis 1 répétition complète. Recommence jusqu'à la fin." },
 ];
 const PREP_SEC = 10;
+// Bodyweight warm-up, done back to back before picking up the dumbbells.
+const WARMUP = [
+  { name: "Jumping jacks", en: "ou pas chassés, sans sauter", anim: "jacks",
+    cue: "Écarte les pieds en levant les bras, puis reviens. Sans sauter si tu préfères : un pied sur le côté à la fois." },
+  { name: "Squat au poids du corps", en: "Bodyweight squat", anim: "bwsquat",
+    cue: "Bras devant, descends lentement en poussant les hanches vers l'arrière. Réveille les genoux et les hanches." },
+  { name: "Good morning", en: "Charnière de hanche", anim: "goodmorning",
+    cue: "Mains sur la poitrine, genoux un peu fléchis. Penche le buste en poussant les fesses vers l'arrière, dos plat. Ça prépare les ischios." },
+  { name: "Fente latérale lente", en: "Side lunge, sans poids", anim: "bwlunge",
+    cue: "Alterne les côtés lentement, sans forcer. Ouvre l'intérieur des cuisses." },
+  { name: "Pont fessier", en: "Glute bridge, sans poids", anim: "bwbridge",
+    cue: "Monte les hanches et serre fort les fessiers 2 secondes en haut. Ça active les fessiers avant la séance." },
+];
+const WARM_SEC = 40, GRAB_SEC = 20;
 
 // ---------- Storage (fails soft) ----------
 const KEY = "fessiers-halteres-v1";
@@ -375,7 +393,23 @@ const POSES = {
     A: { head: [39, 103], sh: [51, 104], hip: [88, 106], knee: [110, 86], ank: [126, 110], toe: [137, 110], elb: [66, 98], hand: [86, 101] },
     B: { head: [39, 103], sh: [51, 104], hip: [88, 85], knee: [112, 81], ank: [126, 110], toe: [137, 110], elb: [67, 92], hand: [86, 80] } },
 };
-POSES.lunge.B2 = mirror(POSES.lunge.B);
+// Warm-up moves (no dumbbell). Jacks use separate hands, so arms can rise on each side.
+POSES.jacks = { view: "front", db: "none", speed: 2.2,
+  A: { head: [100, 11], shL: [88, 24], shR: [112, 24], hipL: [92, 56], hipR: [108, 56], kneeL: [93, 83], kneeR: [107, 83], ankL: [94, 110], ankR: [106, 110],
+       elbL: [85, 40], elbR: [115, 40], handL: [84, 56], handR: [116, 56] },
+  B: { head: [100, 11], shL: [88, 24], shR: [112, 24], hipL: [92, 56], hipR: [108, 56], kneeL: [82, 83], kneeR: [118, 83], ankL: [72, 110], ankR: [128, 110],
+       elbL: [78, 13], elbR: [122, 13], handL: [73, 2], handR: [127, 2] } };
+POSES.bwsquat = { view: "side", db: "none",
+  A: { ...POSES.squat.A, elb: [112, 22], hand: [124, 22] },
+  B: { ...POSES.squat.B, elb: [122, 56], hand: [134, 55] } };
+POSES.goodmorning = { view: "side", db: "none",
+  A: { ...POSES.rdl.A, elb: [108, 31], hand: [103, 26] },
+  B: { ...POSES.rdl.B, elb: [121, 57], hand: [113, 53] } };
+POSES.bwlunge = { view: "front", db: "none", alternate: true, A: POSES.lunge.A, B: POSES.lunge.B };
+POSES.bwbridge = { view: "lying", db: "none",
+  A: { ...POSES.bridge.A, elb: [66, 108], hand: [80, 109] },
+  B: { ...POSES.bridge.B, elb: [66, 108], hand: [80, 109] } };
+POSES.lunge.B2 = POSES.bwlunge.B2 = mirror(POSES.lunge.B);
 
 const ease = x => 0.5 - 0.5 * Math.cos(Math.PI * Math.min(1, Math.max(0, x)));
 const pulse = (t, period) => 0.8 + 0.2 * (0.5 + 0.5 * Math.cos(2 * Math.PI * t / period));
@@ -415,7 +449,7 @@ function drawFigure(canvas, kind, mode, t) {
   const sc = Math.min(w / 200, h / 120);
   ctx.setTransform(dpr * sc, 0, 0, dpr * sc, dpr * (w - 200 * sc) / 2, dpr * (h - 116 * sc) / 2);
 
-  const { k, cycle } = motion(mode, t);
+  const { k, cycle } = motion(mode, t * (def.speed || 1));
   const B = def.alternate && cycle % 2 ? def.B2 : def.B;
   const p = lerpPose(def.A, B, k);
   const ink = css("--text"), acc = css("--accent"), muted = css("--muted");
@@ -442,10 +476,11 @@ function drawFigure(canvas, kind, mode, t) {
     const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
     seg([mid(p.hipL, p.hipR), mid(p.shL, p.shR)], 10);
     seg([p.shL, p.shR], 5);
-    seg([p.shL, p.elbL, p.hand, p.elbR, p.shR], 4);
+    if (p.handL) { seg([p.shL, p.elbL, p.handL], 4); seg([p.shR, p.elbR, p.handR], 4); }
+    else seg([p.shL, p.elbL, p.hand, p.elbR, p.shR], 4);
     head(p.head);
     if (def.db === "goblet") dumbbell(p.hand[0], p.hand[1] - 2, false);
-    else dumbbell(p.hand[0], p.hand[1] + 6, true);
+    else if (def.db === "center") dumbbell(p.hand[0], p.hand[1] + 6, true);
   } else {
     if (def.view === "side") {
       const f = q => [q[0] - 3, q[1]];
@@ -457,7 +492,7 @@ function drawFigure(canvas, kind, mode, t) {
     head(p.head);
     seg([p.sh, p.elb, p.hand], 4);
     if (def.db === "hand") dumbbell(p.hand[0], p.hand[1] + (def.view === "lying" ? -3 : 2), def.view !== "lying");
-    else dumbbell(p.hand[0], p.hand[1] - 3, false);
+    else if (def.db === "shoulder") dumbbell(p.hand[0], p.hand[1] - 3, false);
   }
 }
 
@@ -481,7 +516,12 @@ requestAnimationFrame(animLoop);
 // ---------- Plan ----------
 function buildPlan() {
   const { work, rest } = state.settings;
-  const steps = [{ kind: "prep", dur: PREP_SEC, ex: 0, round: 0 }];
+  const warm = state.settings.warmup !== false;
+  const steps = [{ kind: "prep", dur: PREP_SEC, ex: 0, round: 0, ...(warm ? { warm: 0 } : {}) }];
+  if (warm) {
+    WARMUP.forEach((_, i) => steps.push({ kind: "warm", dur: WARM_SEC, warm: i }));
+    steps.push({ kind: "rest", dur: GRAB_SEC, ex: 0, round: 0, grab: true });
+  }
   EXERCISES.forEach((_, ex) => ROUNDS.forEach((_, round) => {
     steps.push({ kind: "work", dur: work, ex, round });
     const last = ex === EXERCISES.length - 1 && round === ROUNDS.length - 1;
@@ -518,10 +558,12 @@ function enterStep() {
   P.endAt = Date.now() + s.dur * 1000;
   P.remaining = s.dur * 1000;
   P.lastShown = null;
-  const ex = EXERCISES[s.ex], rd = ROUNDS[s.round];
   const player = $("#player");
   player.classList.toggle("rest", s.kind === "rest");
-  player.classList.toggle("prep", s.kind === "prep");
+  player.classList.toggle("prep", s.kind === "prep" || s.kind === "warm");
+  player.classList.add("has-anim");
+  if (s.warm !== undefined) return enterWarmStep(s);
+  const ex = EXERCISES[s.ex], rd = ROUNDS[s.round];
   $("#p-phase").textContent = { prep: "PRÊTE ?", work: "EFFORT", rest: "REPOS" }[s.kind];
   $("#p-name").textContent = (s.kind === "work" ? "" : "Ensuite : ") + ex.name;
   $("#p-en").textContent = ex.en;
@@ -530,12 +572,29 @@ function enterStep() {
   playerAnim = { kind: ex.anim, mode: s.kind === "prep" ? 0 : s.round, start: performance.now() };
   $("#p-anim").setAttribute("aria-label", `${ex.name} : ${rd.label}`);
   $("#p-mode").textContent = `Tour ${s.round + 1}/3 · ${rd.label}`;
-  $("#p-cue").textContent = s.kind === "work" ? rd.hint : ex.cue;
+  $("#p-cue").textContent = s.kind === "work" ? rd.hint : s.grab ? `Prends tes haltères. ${ex.cue}` : ex.cue;
   $("#p-where").textContent = `Exercice ${s.ex + 1}/${EXERCISES.length} · tour ${s.round + 1}/3`;
 
   if (s.kind === "prep") say(`Prépare tes haltères. Premier exercice : ${ex.name}, ${rd.say}.`);
+  else if (s.grab) { tone(660, 0.35); say(`Échauffement terminé. Prends tes haltères. Premier exercice : ${ex.name}, ${rd.say}.`); }
   else if (s.kind === "work") { tone(988, 0.35); say(s.round === 0 ? `${ex.name}. C'est parti !` : "C'est parti !"); }
   else { tone(660, 0.35); say(`Repos. Ensuite : ${s.round === 0 ? ex.name + ", " : ""}${rd.say}.`); }
+  render();
+}
+
+// Warm-up steps (and the prep step before them): no rounds, always a full-rep animation.
+function enterWarmStep(s) {
+  const w = WARMUP[s.warm];
+  $("#p-phase").textContent = s.kind === "prep" ? "PRÊTE ?" : "ÉCHAUFFEMENT";
+  $("#p-name").textContent = (s.kind === "prep" ? "Ensuite : " : "") + w.name;
+  $("#p-en").textContent = w.en;
+  playerAnim = { kind: w.anim, mode: 0, start: performance.now() };
+  $("#p-anim").setAttribute("aria-label", w.name);
+  $("#p-mode").textContent = `Échauffement ${s.warm + 1}/${WARMUP.length}`;
+  $("#p-cue").textContent = w.cue;
+  $("#p-where").textContent = `Échauffement ${s.warm + 1}/${WARMUP.length}`;
+  if (s.kind === "prep") say(`On commence par l'échauffement. Premier mouvement : ${w.name}.`);
+  else { tone(988, 0.35); say(w.name); }
   render();
 }
 
@@ -636,6 +695,7 @@ $("#done-save").onclick = () => {
 function renderHome() {
   const steps = buildPlan();
   $("#chip-time").textContent = `${Math.round(totalSec(steps) / 60)} min`;
+  $("#warm-title").hidden = $("#warm-list").hidden = state.settings.warmup === false;
   $("#chip-interval").textContent = `${state.settings.work} s effort / ${state.settings.rest} s repos`;
 
   const wk = startOfWeek(Date.now());
@@ -674,6 +734,10 @@ $("#ex-list").innerHTML = EXERCISES.map((e, i) => `<li>
   <div class="top"><span class="n">${i + 1}</span><div><b>${e.name}</b> <span class="en">· ${e.en}</span></div></div>
   <p>${e.cue}</p>
   <a class="watch" href="${VIDEO}&t=${e.t}s" target="_blank" rel="noopener">▶ Voir dans la vidéo (${fmtClock(e.t)})</a></li>`).join("");
+$("#warm-list").innerHTML = WARMUP.map((w, i) => `<li>
+  <canvas class="anim" data-anim="${w.anim}" role="img" aria-label="${w.name}"></canvas>
+  <div class="top"><span class="n">${i + 1}</span><div><b>${w.name}</b> <span class="en">· ${w.en}</span></div></div>
+  <p>${w.cue}</p></li>`).join("");
 $("#rounds").innerHTML = ROUNDS.map((r, i) =>
   `<div class="round"><span class="k">${i + 1}</span><b>${r.label}</b><span>${r.hint}</span></div>`).join("");
 
@@ -684,6 +748,9 @@ voiceInp.checked = state.settings.voice;
 workInp.onchange = () => { state.settings.work = Math.min(120, Math.max(15, +workInp.value || 45)); workInp.value = state.settings.work; save(); renderHome(); };
 restInp.onchange = () => { state.settings.rest = Math.min(120, Math.max(5, +restInp.value || 15)); restInp.value = state.settings.rest; save(); renderHome(); };
 voiceInp.onchange = () => { state.settings.voice = voiceInp.checked; save(); };
+const warmInp = $("#set-warm");
+warmInp.checked = state.settings.warmup !== false;
+warmInp.onchange = () => { state.settings.warmup = warmInp.checked; save(); renderHome(); };
 
 renderHome();
 </script>
