@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#c2477a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Galbe">
+<title>Galbe – Fessiers & Taille</title>
+<style>
+  :root {
+    --bg: #fbf6f8;
+    --card: #ffffff;
+    --text: #2a1f25;
+    --muted: #7d6b74;
+    --line: #eadde3;
+    --accent: #c2477a;
+    --accent-soft: #f7e1ea;
+    --ok: #2f8f68;
+    --ok-soft: #dcf1e7;
+    --shadow: 0 1px 3px rgba(60, 20, 40, .08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17121a;
+      --card: #221b25;
+      --text: #f3eaf0;
+      --muted: #a8939f;
+      --line: #3a2f3d;
+      --accent: #ec79a7;
+      --accent-soft: #3d2332;
+      --ok: #5cc99a;
+      --ok-soft: #1d3a2e;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+    -webkit-tap-highlight-color: transparent;
+  }
+  header {
+    padding: calc(16px + env(safe-area-inset-top)) 16px 8px;
+    max-width: 640px; margin: 0 auto;
+  }
+  header h1 { margin: 0; font-size: 1.5rem; letter-spacing: -.01em; }
+  header p { margin: 2px 0 0; color: var(--muted); font-size: .9rem; }
+  main { max-width: 640px; margin: 0 auto; padding: 0 16px; }
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 14px; margin: 12px 0; box-shadow: var(--shadow);
+  }
+  h2 { font-size: 1.05rem; margin: 22px 0 6px; color: var(--accent); }
+  h2 small { color: var(--muted); font-weight: 500; font-size: .8rem; }
+  .muted { color: var(--muted); font-size: .9rem; }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .stat { text-align: center; padding: 10px 4px; }
+  .stat b { display: block; font-size: 1.4rem; }
+  .stat span { font-size: .75rem; color: var(--muted); }
+  .warn { background: var(--accent-soft); border-radius: 10px; padding: 8px 10px; font-size: .88rem; margin-top: 10px; }
+
+  .ex-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .ex-head h3 { margin: 0; font-size: 1rem; }
+  .ex-target { color: var(--muted); font-size: .85rem; white-space: nowrap; }
+  .ex-name-fr { color: var(--muted); font-size: .82rem; }
+  details { margin-top: 6px; }
+  summary { color: var(--accent); font-size: .85rem; cursor: pointer; }
+  details p { margin: 6px 0 0; font-size: .9rem; }
+
+  .sets { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .set {
+    min-width: 44px; height: 44px; border-radius: 22px; border: 2px solid var(--line);
+    background: transparent; color: var(--text); font: inherit; font-weight: 600; padding: 0 12px;
+  }
+  .set.done { background: var(--ok); border-color: var(--ok); color: #fff; }
+  .card.complete { border-color: var(--ok); background: var(--ok-soft); }
+
+  .row { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+  .row label { font-size: .85rem; color: var(--muted); }
+  input[type=number], input[type=text] {
+    font: inherit; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--bg); color: var(--text); width: 90px;
+  }
+  .btn {
+    font: inherit; font-weight: 600; border: none; border-radius: 12px; padding: 10px 14px;
+    background: var(--accent); color: #fff; cursor: pointer;
+  }
+  .btn.ghost { background: var(--accent-soft); color: var(--accent); }
+  .btn.block { width: 100%; padding: 14px; margin-top: 16px; font-size: 1rem; }
+  .btn:disabled { opacity: .5; }
+
+  /* Timer overlay */
+  #timer {
+    position: fixed; left: 0; right: 0; bottom: calc(64px + env(safe-area-inset-bottom));
+    display: none; justify-content: center; padding: 0 16px; z-index: 20;
+  }
+  #timer.show { display: flex; }
+  #timer .inner {
+    width: 100%; max-width: 608px; background: var(--text); color: var(--bg);
+    border-radius: 16px; padding: 12px 14px; display: flex; align-items: center; gap: 12px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.25);
+  }
+  #timer .t-label { flex: 1; font-size: .85rem; opacity: .8; }
+  #timer .t-time { font-size: 1.8rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  #timer button { background: transparent; color: inherit; border: 1px solid currentColor; border-radius: 10px; font: inherit; padding: 6px 10px; }
+
+  nav {
+    position: fixed; bottom: 0; left: 0; right: 0; background: var(--card);
+    border-top: 1px solid var(--line); display: flex; justify-content: center;
+    padding-bottom: env(safe-area-inset-bottom); z-index: 10;
+  }
+  nav .wrap { display: flex; width: 100%; max-width: 640px; }
+  nav button {
+    flex: 1; background: none; border: none; font: inherit; font-size: .78rem; color: var(--muted);
+    padding: 10px 0 12px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  }
+  nav button .ico { font-size: 1.25rem; line-height: 1; }
+  nav button.active { color: var(--accent); font-weight: 600; }
+
+  .hist-item { display: flex; justify-content: space-between; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .hist-item:last-child { border-bottom: none; }
+  .hist-item .d { font-weight: 600; }
+  .hist-item .s { font-size: .82rem; color: var(--muted); }
+  .del { background: none; border: none; color: var(--muted); font-size: 1.1rem; }
+
+  ul.tips { padding-left: 18px; margin: 6px 0 0; }
+  ul.tips li { margin: 4px 0; }
+  .progress { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; margin-top: 8px; }
+  .progress > div { height: 100%; background: var(--accent); width: 0; transition: width .3s; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1 id="title">Séance du jour</h1>
+  <p id="subtitle">Fessiers, cuisses & taille fine</p>
+</header>
+
+<main>
+  <!-- WORKOUT -->
+  <section id="view-workout" class="view active">
+    <div class="card">
+      <div class="stats">
+        <div class="stat"><b id="st-week">0</b><span>séances cette semaine</span></div>
+        <div class="stat"><b id="st-total">0</b><span>séances au total</span></div>
+        <div class="stat"><b id="st-last">–</b><span>dernière séance</span></div>
+      </div>
+      <div class="progress"><div id="session-progress"></div></div>
+      <div id="rest-warning" class="warn" hidden></div>
+    </div>
+    <div id="workout"></div>
+    <button id="finish" class="btn block">Terminer la séance ✓</button>
+    <p class="muted" style="text-align:center;margin-top:8px">Objectif : 3 à 4 séances / semaine, avec un jour de repos entre chaque.</p>
+  </section>
+
+  <!-- HISTORY -->
+  <section id="view-history" class="view">
+    <div class="card" id="history-week"></div>
+    <div class="card" id="history-list"></div>
+  </section>
+
+  <!-- TIPS -->
+  <section id="view-tips" class="view">
+    <h2>Principes clés</h2>
+    <div class="card">
+      <ul class="tips">
+        <li><b>Surcharge progressive :</b> les fessiers ont besoin de résistance pour grossir. Sans poids, utilise des bandes élastiques, un sac à dos lesté de livres, ou ralentis la descente (3 secondes).</li>
+        <li><b>Taille fine :</b> évite les abdos lourds sur les côtés (flexions latérales lestées). Privilégie le gainage pour un effet « corset ».</li>
+        <li><b>Régularité :</b> bas du corps 3 fois par semaine, avec un jour de repos entre chaque séance.</li>
+        <li><b>Repos :</b> 60 à 90 secondes entre chaque série.</li>
+      </ul>
+    </div>
+    <h2>Nutrition</h2>
+    <div class="card">
+      <p style="margin-top:0">À 115 lb, pour que les fessiers et les cuisses se développent, ton corps a besoin de carburant : mange suffisamment de protéines (poulet, œufs, tofu, poisson, légumineuses) et évite le déficit calorique — vise un léger surplus.</p>
+      <p class="muted" style="margin-bottom:0">Repère courant : environ 1,6 à 2 g de protéines par kg de poids corporel, soit à peu près 85 à 105 g par jour à 52 kg (115 lb).</p>
+    </div>
+    <h2>Réglages</h2>
+    <div class="card">
+      <div class="row" style="margin-top:0">
+        <label for="rest-sec">Repos entre les séries (s)</label>
+        <input id="rest-sec" type="number" min="15" max="300" step="15">
+      </div>
+      <div class="row">
+        <label><input id="auto-rest" type="checkbox"> Lancer le minuteur de repos automatiquement</label>
+      </div>
+      <div class="row">
+        <button id="reset-all" class="btn ghost">Effacer tout l'historique</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="timer">
+  <div class="inner">
+    <div class="t-label" id="t-label">Repos</div>
+    <div class="t-time" id="t-time">0:00</div>
+    <button id="t-plus">+15</button>
+    <button id="t-stop">✕</button>
+  </div>
+</div>
+
+<nav>
+  <div class="wrap">
+    <button data-view="workout" class="active"><span class="ico">🍑</span>Séance</button>
+    <button data-view="history"><span class="ico">📅</span>Suivi</button>
+    <button data-view="tips"><span class="ico">💡</span>Conseils</button>
+  </div>
+</nav>
+
+<script>
+// ---------- Program ----------
+// type: "reps" = tap a bubble per set; "hold" = each set starts a countdown.
+const PROGRAM = [
+  { section: "1. Activation & échauffement", note: "Obligatoire", exercises: [
+    { id: "frog", name: "Frog Pumps", sets: 3, target: "30 reps", type: "reps",
+      how: "Allongée sur le dos, plantes des pieds collées l'une contre l'autre. Monte le bassin en serrant fort les fessiers." },
+    { id: "donkey", name: "Donkey Kicks", sets: 2, target: "15 reps / jambe", type: "reps", perLeg: true,
+      how: "À quatre pattes, pousse le talon vers le plafond, genou plié à 90°, sans cambrer le bas du dos." },
+  ]},
+  { section: "2. Volume fessiers & cuisses", exercises: [
+    { id: "bridge", name: "Glute Bridge", fr: "Pont fessier", sets: 4, target: "15–20 reps", type: "reps", load: true,
+      how: "Sur le dos, pieds à plat. Monte le bassin et maintiens la contraction 2 secondes en haut. Progression : place un sac lesté sur tes hanches." },
+    { id: "bulgarian", name: "Bulgarian Split Squat", fr: "Squat bulgare", sets: 3, target: "10–12 reps / jambe", type: "reps", perLeg: true, load: true,
+      how: "Pose un pied en arrière sur une chaise ou ton lit. Descends bien bas pour cibler l'étirement du fessier." },
+    { id: "curtsy", name: "Curtsy Lunge", fr: "Fente révérence", sets: 3, target: "12 reps / jambe", type: "reps", perLeg: true, load: true,
+      how: "Croise la jambe vers l'arrière en diagonale pour cibler l'arrondi des hanches et le haut des fessiers." },
+    { id: "hydrant", name: "Fire Hydrant", fr: "Le bouledogue", sets: 3, target: "20 reps / jambe", type: "reps", perLeg: true,
+      how: "À quatre pattes, lève le genou sur le côté sans bouger le bassin. Travaille le moyen fessier pour du galbe sur les côtés." },
+  ]},
+  { section: "3. Taille fine & abdos", exercises: [
+    { id: "vacuum", name: "Stomach Vacuum", fr: "Aspiration abdominale", sets: 5, target: "tenir 10–15 s", type: "hold", hold: 15,
+      how: "À jeun le matin ou avant de manger. Expire tout ton air, aspire le nombril sous les côtes et tiens 10 à 15 secondes sans respirer. 3 séries de 5 respirations." },
+    { id: "plank", name: "Planche", sets: 3, target: "30–45 s", type: "hold", hold: 40, load: false, adjustHold: true,
+      how: "Corps bien droit, serre activement les fessiers et le ventre." },
+    { id: "birddog", name: "Bird-Dog", sets: 3, target: "12 reps / côté", type: "reps",
+      how: "À quatre pattes, tends le bras et la jambe opposés, dos plat. Améliore la posture pour une silhouette plus élancée." },
+  ]},
+];
+const ALL = PROGRAM.flatMap(s => s.exercises);
+
+// ---------- Storage (fails soft) ----------
+const KEY = "galbe-v1";
+function load() {
+  try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; }
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {}
+}
+const state = Object.assign({ history: [], current: null, settings: { rest: 75, autoRest: true }, holds: {} }, load());
+
+function freshSession() {
+  const s = { started: Date.now(), done: {}, loads: {} };
+  ALL.forEach(e => { s.done[e.id] = Array(e.sets).fill(false); });
+  return s;
+}
+if (!state.current) state.current = freshSession();
+// Make sure session matches program shape (in case the program changed).
+ALL.forEach(e => {
+  const d = state.current.done[e.id];
+  if (!Array.isArray(d) || d.length !== e.sets) state.current.done[e.id] = Array(e.sets).fill(false);
+});
+
+// ---------- Helpers ----------
+const $ = s => document.querySelector(s);
+const DAY = 86400000;
+const startOfDay = t => { const d = new Date(t); d.setHours(0,0,0,0); return d.getTime(); };
+function startOfWeek(t) { // Monday
+  const d = new Date(startOfDay(t)); const wd = (d.getDay() + 6) % 7;
+  return d.getTime() - wd * DAY;
+}
+const fmtDate = t => new Date(t).toLocaleDateString("fr-CA", { weekday: "short", day: "numeric", month: "short" });
+const fmtTime = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+function lastLoad(id) {
+  for (let i = state.history.length - 1; i >= 0; i--) {
+    const v = state.history[i].loads && state.history[i].loads[id];
+    if (v) return v;
+  }
+  return null;
+}
+
+// ---------- Sound / vibration ----------
+let audio;
+function beep(times = 1) {
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    for (let i = 0; i < times; i++) {
+      const o = audio.createOscillator(), g = audio.createGain();
+      o.frequency.value = 880; o.connect(g); g.connect(audio.destination);
+      const t = audio.currentTime + i * 0.25;
+      g.gain.setValueAtTime(0.2, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+      o.start(t); o.stop(t + 0.2);
+    }
+  } catch {}
+  if (navigator.vibrate) navigator.vibrate(times > 1 ? [200, 100, 200] : 200);
+}
+
+// ---------- Timer ----------
+let timer = null;
+function startTimer(seconds, label, onDone) {
+  stopTimer();
+  const end = Date.now() + seconds * 1000;
+  timer = { end, label, onDone };
+  $("#t-label").textContent = label;
+  $("#timer").classList.add("show");
+  tick();
+  timer.iv = setInterval(tick, 250);
+}
+function tick() {
+  if (!timer) return;
+  const left = Math.max(0, Math.ceil((timer.end - Date.now()) / 1000));
+  $("#t-time").textContent = fmtTime(left);
+  if (left === 0) {
+    const cb = timer.onDone;
+    stopTimer();
+    beep(2);
+    if (cb) cb();
+  }
+}
+function stopTimer() {
+  if (timer) clearInterval(timer.iv);
+  timer = null;
+  $("#timer").classList.remove("show");
+}
+$("#t-stop").onclick = stopTimer;
+$("#t-plus").onclick = () => { if (timer) { timer.end += 15000; tick(); } };
+
+// ---------- Render workout ----------
+function render() {
+  const root = $("#workout");
+  root.innerHTML = "";
+  PROGRAM.forEach(sec => {
+    const h = document.createElement("h2");
+    h.innerHTML = sec.section + (sec.note ? ` <small>· ${sec.note}</small>` : "");
+    root.appendChild(h);
+    sec.exercises.forEach(ex => root.appendChild(exerciseCard(ex)));
+  });
+  renderStats();
+}
+
+function exerciseCard(ex) {
+  const done = state.current.done[ex.id];
+  const card = document.createElement("div");
+  card.className = "card" + (done.every(Boolean) ? " complete" : "");
+
+  const holdSec = ex.adjustHold ? (state.holds[ex.id] || ex.hold) : ex.hold;
+  card.innerHTML = `
+    <div class="ex-head">
+      <h3>${ex.name}</h3>
+      <span class="ex-target">${ex.sets} × ${ex.type === "hold" && ex.adjustHold ? holdSec + " s" : ex.target}</span>
+    </div>
+    ${ex.fr ? `<div class="ex-name-fr">${ex.fr}</div>` : ""}
+    <details><summary>Comment faire</summary><p>${ex.how}</p></details>
+  `;
+
+  const sets = document.createElement("div");
+  sets.className = "sets";
+  done.forEach((d, i) => {
+    const b = document.createElement("button");
+    b.className = "set" + (d ? " done" : "");
+    b.textContent = d ? "✓" : (ex.type === "hold" ? `▶ ${i + 1}` : i + 1);
+    b.setAttribute("aria-label", `Série ${i + 1}`);
+    b.onclick = () => onSet(ex, i, holdSec);
+    sets.appendChild(b);
+  });
+  card.appendChild(sets);
+
+  if (ex.load) {
+    const prev = lastLoad(ex.id);
+    const row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = `<label>Charge / résistance</label>`;
+    const inp = document.createElement("input");
+    inp.type = "text";
+    inp.placeholder = prev || "ex. 10 lb";
+    inp.value = state.current.loads[ex.id] || "";
+    inp.oninput = () => { state.current.loads[ex.id] = inp.value.trim(); save(); };
+    row.appendChild(inp);
+    if (prev) {
+      const m = document.createElement("span");
+      m.className = "muted";
+      m.textContent = `Dernière fois : ${prev}`;
+      row.appendChild(m);
+    }
+    card.appendChild(row);
+  }
+
+  if (ex.adjustHold) {
+    const row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = `<label>Durée (s)</label>`;
+    const inp = document.createElement("input");
+    inp.type = "number"; inp.min = 10; inp.max = 180; inp.step = 5; inp.value = holdSec;
+    inp.onchange = () => { state.holds[ex.id] = Math.max(10, +inp.value || ex.hold); save(); render(); };
+    row.appendChild(inp);
+    card.appendChild(row);
+  }
+  return card;
+}
+
+function onSet(ex, i, holdSec) {
+  const done = state.current.done[ex.id];
+  if (done[i]) { // undo
+    done[i] = false; save(); render(); return;
+  }
+  if (ex.type === "hold") {
+    beep(1);
+    startTimer(holdSec, `${ex.name} · série ${i + 1}`, () => {
+      done[i] = true; save(); render();
+      if (state.settings.autoRest && done.some(d => !d)) startTimer(state.settings.rest, "Repos");
+    });
+    return;
+  }
+  done[i] = true; save(); render();
+  if (state.settings.autoRest) startTimer(state.settings.rest, "Repos");
+}
+
+function renderStats() {
+  const now = Date.now();
+  const wk = startOfWeek(now);
+  const thisWeek = state.history.filter(h => h.date >= wk).length;
+  $("#st-week").textContent = thisWeek;
+  $("#st-total").textContent = state.history.length;
+  const last = state.history[state.history.length - 1];
+  $("#st-last").textContent = last ? fmtDate(last.date).replace(".", "") : "–";
+
+  const all = Object.values(state.current.done).flat();
+  $("#session-progress").style.width = (100 * all.filter(Boolean).length / all.length) + "%";
+
+  const warn = $("#rest-warning");
+  if (last && startOfDay(last.date) >= startOfDay(now) - DAY) {
+    warn.hidden = false;
+    warn.textContent = startOfDay(last.date) === startOfDay(now)
+      ? "Tu t'es déjà entraînée aujourd'hui. Les muscles grossissent pendant le repos 💤"
+      : "Séance faite hier : idéalement, garde aujourd'hui comme jour de repos.";
+  } else warn.hidden = true;
+}
+
+$("#finish").onclick = () => {
+  const all = Object.values(state.current.done).flat();
+  const n = all.filter(Boolean).length;
+  if (n === 0) { alert("Coche au moins une série avant de terminer."); return; }
+  if (n < all.length && !confirm(`${n}/${all.length} séries faites. Enregistrer quand même ?`)) return;
+  state.history.push({
+    date: Date.now(),
+    sets: n, total: all.length,
+    loads: Object.fromEntries(Object.entries(state.current.loads).filter(([, v]) => v)),
+  });
+  state.current = freshSession();
+  save(); stopTimer(); render(); renderHistory();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  alert("Bravo ! Séance enregistrée 💪");
+};
+
+// ---------- History ----------
+function renderHistory() {
+  const wk = startOfWeek(Date.now());
+  const days = ["L", "M", "M", "J", "V", "S", "D"];
+  const trained = new Set(state.history.map(h => startOfDay(h.date)));
+  let cells = "";
+  for (let i = 0; i < 7; i++) {
+    const t = wk + i * DAY;
+    const on = trained.has(startOfDay(t));
+    const today = startOfDay(Date.now()) === startOfDay(t);
+    cells += `<div style="text-align:center">
+      <div class="muted" style="font-size:.75rem">${days[i]}</div>
+      <div style="width:34px;height:34px;margin:4px auto 0;border-radius:17px;display:flex;align-items:center;justify-content:center;
+        background:${on ? "var(--accent)" : "transparent"};color:${on ? "#fff" : "var(--muted)"};
+        border:2px solid ${today ? "var(--accent)" : "var(--line)"}">${new Date(t).getDate()}</div></div>`;
+  }
+  const count = state.history.filter(h => h.date >= wk).length;
+  $("#history-week").innerHTML = `
+    <div class="ex-head"><h3>Cette semaine</h3><span class="ex-target">${count} / 3–4</span></div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);margin-top:10px">${cells}</div>`;
+
+  const list = $("#history-list");
+  if (!state.history.length) {
+    list.innerHTML = `<p class="muted" style="margin:0">Aucune séance enregistrée pour l'instant. Termine ta première séance pour la voir ici.</p>`;
+    return;
+  }
+  list.innerHTML = `<h3 style="margin:0 0 4px;font-size:1rem">Historique</h3>`;
+  state.history.slice().reverse().forEach((h, ri) => {
+    const idx = state.history.length - 1 - ri;
+    const loads = Object.entries(h.loads || {}).map(([id, v]) => {
+      const ex = ALL.find(e => e.id === id);
+      return `${ex ? (ex.fr || ex.name) : id} : ${v}`;
+    }).join(" · ");
+    const row = document.createElement("div");
+    row.className = "hist-item";
+    row.innerHTML = `<div><div class="d">${fmtDate(h.date)}</div>
+      <div class="s">${h.sets}/${h.total} séries${loads ? " · " + loads : ""}</div></div>`;
+    const del = document.createElement("button");
+    del.className = "del"; del.textContent = "🗑"; del.setAttribute("aria-label", "Supprimer");
+    del.onclick = () => { if (confirm("Supprimer cette séance ?")) { state.history.splice(idx, 1); save(); renderHistory(); renderStats(); } };
+    row.appendChild(del);
+    list.appendChild(row);
+  });
+}
+
+// ---------- Settings ----------
+const restInp = $("#rest-sec"), autoInp = $("#auto-rest");
+restInp.value = state.settings.rest;
+autoInp.checked = state.settings.autoRest;
+restInp.onchange = () => { state.settings.rest = Math.min(300, Math.max(15, +restInp.value || 75)); restInp.value = state.settings.rest; save(); };
+autoInp.onchange = () => { state.settings.autoRest = autoInp.checked; save(); };
+$("#reset-all").onclick = () => {
+  if (confirm("Effacer tout l'historique et la séance en cours ?")) {
+    state.history = []; state.current = freshSession(); save(); render(); renderHistory();
+  }
+};
+
+// ---------- Navigation ----------
+const TITLES = {
+  workout: ["Séance du jour", "Fessiers, cuisses & taille fine"],
+  history: ["Suivi", "Ta régularité semaine après semaine"],
+  tips: ["Conseils", "Principes, nutrition et réglages"],
+};
+document.querySelectorAll("nav button").forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll("nav button").forEach(x => x.classList.toggle("active", x === b));
+    document.querySelectorAll(".view").forEach(v => v.classList.toggle("active", v.id === "view-" + b.dataset.view));
+    [$("#title").textContent, $("#subtitle").textContent] = TITLES[b.dataset.view];
+    window.scrollTo(0, 0);
+  };
+});
+
+render();
+renderHistory();
+</script>
+</body>
+</html>
