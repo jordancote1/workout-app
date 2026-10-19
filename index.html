@@ -216,6 +216,10 @@
         <label><input id="auto-rest" type="checkbox"> Lancer le minuteur de repos automatiquement</label>
       </div>
       <div class="row">
+        <label><input id="keep-awake" type="checkbox"> Garder l'écran allumé pendant la séance</label>
+      </div>
+      <p id="awake-status" class="muted" style="margin:6px 0 0" hidden></p>
+      <div class="row">
         <button id="reset-all" class="btn ghost">Effacer tout l'historique</button>
       </div>
     </div>
@@ -289,7 +293,7 @@ function load() {
 function save() {
   try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {}
 }
-const state = Object.assign({ history: [], current: null, settings: { rest: 75, autoRest: true }, holds: {} }, load());
+const state = Object.assign({ history: [], current: null, settings: { rest: 75, autoRest: true, keepAwake: true }, holds: {} }, load());
 
 function freshSession() {
   const s = { started: Date.now(), done: {}, loads: {} };
@@ -563,6 +567,39 @@ restInp.value = state.settings.rest;
 autoInp.checked = state.settings.autoRest;
 restInp.onchange = () => { state.settings.rest = Math.min(300, Math.max(15, +restInp.value || 75)); restInp.value = state.settings.rest; save(); };
 autoInp.onchange = () => { state.settings.autoRest = autoInp.checked; save(); };
+// ---------- Keep screen on (Screen Wake Lock) ----------
+// The lock is dropped whenever the page is hidden, so it's re-requested on return.
+const awakeInp = $("#keep-awake"), awakeStatus = $("#awake-status");
+let wakeLock = null;
+if (state.settings.keepAwake === undefined) state.settings.keepAwake = true;
+awakeInp.checked = state.settings.keepAwake;
+async function updateWakeLock() {
+  if (!("wakeLock" in navigator)) {
+    awakeInp.disabled = true;
+    awakeStatus.hidden = false;
+    awakeStatus.textContent = "Non disponible sur ce navigateur. Sur iPhone, mets à jour iOS ou augmente le délai de verrouillage (Réglages › Luminosité et affichage).";
+    return;
+  }
+  if (state.settings.keepAwake && document.visibilityState === "visible") {
+    if (wakeLock && !wakeLock.released) return;
+    try {
+      wakeLock = await navigator.wakeLock.request("screen");
+      awakeStatus.hidden = true;
+    } catch {
+      // Some browsers only grant it after a tap; retried on the next one.
+      awakeStatus.hidden = false;
+      awakeStatus.textContent = "Touche l'écran une fois pour activer.";
+    }
+  } else if (wakeLock) {
+    wakeLock.release().catch(() => {});
+    wakeLock = null;
+  }
+}
+awakeInp.onchange = () => { state.settings.keepAwake = awakeInp.checked; save(); updateWakeLock(); };
+document.addEventListener("visibilitychange", updateWakeLock);
+document.addEventListener("click", updateWakeLock);
+updateWakeLock();
+
 $("#reset-all").onclick = async () => {
   if (await ask("Effacer tout l'historique et la séance en cours ?", "Effacer")) {
     state.history = []; state.current = freshSession(); save(); render(); renderHistory();
