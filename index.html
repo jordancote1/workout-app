@@ -106,6 +106,12 @@
   .hist { margin-top: 10px; }
   .hist-item { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 0; border-top: 1px solid var(--line); }
   .hist-item .s { font-size: .82rem; color: var(--muted); }
+  .goal { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+  .goal-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .goal-top b { font-size: 1.05rem; }
+  .goal-top span { font-size: .85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .goal .bar > div { background: var(--accent); }
+  .goal p { margin: 8px 0 0; font-size: .88rem; }
   .measure-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
   .measure-form label { display: grid; gap: 4px; font-size: .85rem; color: var(--muted); }
   .measure-form input { width: 100%; text-align: left; }
@@ -276,6 +282,11 @@
 
   <h2>Mensurations</h2>
   <div class="card">
+    <div class="goal" id="goal">
+      <div class="goal-top"><b id="goal-title"></b><span id="goal-nums"></span></div>
+      <div class="bar"><div id="goal-bar"></div></div>
+      <p id="goal-msg"></p>
+    </div>
     <div class="measure-form">
       <label for="m-weight">Poids (lb)<input id="m-weight" type="text" inputmode="decimal" autocomplete="off" placeholder="115"></label>
       <label for="m-hips">Hanches (po)<input id="m-hips" type="text" inputmode="decimal" autocomplete="off" placeholder="34"></label>
@@ -356,6 +367,7 @@
   <div class="card settings">
     <div class="row"><label for="set-work">Effort (secondes)</label><input id="set-work" type="number" min="15" max="120" step="5"></div>
     <div class="row"><label for="set-rest">Repos (secondes)</label><input id="set-rest" type="number" min="5" max="120" step="5"></div>
+    <div class="row"><label for="set-goal">Poids cible (lb)</label><input id="set-goal" type="number" min="90" max="250" step="1"></div>
     <div class="row"><label for="set-cal">Objectif calories par jour</label><input id="set-cal" type="number" min="1500" max="5000" step="50"></div>
     <div class="row"><label for="set-warm">Échauffement avant la séance</label><input id="set-warm" type="checkbox"></div>
     <div class="row"><label for="set-voice">Annonces vocales</label><input id="set-voice" type="checkbox"></div>
@@ -935,7 +947,49 @@ const METRICS = [
 const fmtNum = n => n.toLocaleString("fr-CA", { maximumFractionDigits: 1 });
 const MEASURE_HINT = "Le poids chaque semaine, les hanches et la taille chaque mois.";
 
+// Ends a sentence without doubling the period of an abbreviated date ("déc.").
+const endDot = t => t.endsWith(".") ? t : t + ".";
+
+// Progress from the first logged weight toward the target, with an ETA from the recent trend
+// (last 6 weeks, once at least 2 weeks of data exist).
+function renderGoal() {
+  const target = state.settings.goalWeight || 125;
+  const ws = state.measures.filter(m => m.weight);
+  $("#goal-title").textContent = `Objectif : ${fmtNum(target)} lb`;
+  const bar = $("#goal-bar"), msg = $("#goal-msg"), nums = $("#goal-nums");
+  if (!ws.length) {
+    nums.textContent = "";
+    bar.style.width = "0%";
+    msg.textContent = "Entre ton poids ci-dessous pour suivre ta progression.";
+    return;
+  }
+  const start = ws[0].weight, last = ws[ws.length - 1];
+  const left = Math.round((target - last.weight) * 10) / 10;
+  nums.textContent = `${fmtNum(start)} → ${fmtNum(last.weight)} lb`;
+  if (left <= 0) {
+    bar.style.width = "100%";
+    msg.innerHTML = target < 130
+      ? "<b>Étape 1 atteinte ! 🎉</b> Prochaine étape : 130 à 140 lb. Change ton poids cible dans Réglages quand tu le souhaites."
+      : "<b>Objectif atteint ! 🎉</b> Surveille ton tour de taille et de hanches pour décider de la suite.";
+    return;
+  }
+  bar.style.width = (target > start ? Math.max(0, Math.min(100, 100 * (last.weight - start) / (target - start))) : 0) + "%";
+  const recent = ws.filter(m => m.date >= last.date - 42 * DAY);
+  const span = (last.date - recent[0].date) / (7 * DAY);
+  let eta;
+  if (span >= 2) {
+    const rate = (last.weight - recent[0].weight) / span;
+    eta = rate >= 0.1
+      ? `À ton rythme (${fmtNum(Math.round(rate * 10) / 10)} lb/sem.), tu y seras vers le ${endDot(fmtDate(last.date + left / rate * 7 * DAY))}`
+      : "Ton poids ne monte pas depuis 2 semaines : ajoute environ 250 cal par jour.";
+  } else {
+    eta = `À ½ à 1 lb par semaine : entre le ${fmtDate(last.date + left * 7 * DAY)} et le ${endDot(fmtDate(last.date + left * 14 * DAY))}`;
+  }
+  msg.innerHTML = `<b>Encore ${fmtNum(left)} lb.</b> ${eta}`;
+}
+
 function renderMeasures() {
+  renderGoal();
   const list = state.measures;
   const msg = $("#m-msg");
   msg.classList.remove("err");
@@ -1316,6 +1370,13 @@ function renderFood() {
 $("#cal-prev").onclick = () => { foodMonth = new Date(foodMonth.getFullYear(), foodMonth.getMonth() - 1, 1); renderFood(); };
 $("#cal-next").onclick = () => { foodMonth = new Date(foodMonth.getFullYear(), foodMonth.getMonth() + 1, 1); renderFood(); };
 
+const goalInp = $("#set-goal");
+goalInp.value = state.settings.goalWeight || 125;
+goalInp.onchange = () => {
+  state.settings.goalWeight = Math.min(250, Math.max(90, Math.round(+goalInp.value || 125)));
+  goalInp.value = state.settings.goalWeight;
+  save(); renderGoal();
+};
 const calInp = $("#set-cal");
 calInp.value = state.settings.calTarget || 2500;
 calInp.onchange = () => {
