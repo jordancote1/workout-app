@@ -125,6 +125,33 @@
   .m-note { fill: var(--muted); font-size: 8.5px; }
   .m-cap { fill: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
   .m-steps { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: .88rem; }
+  .ph-add { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .ph-add .btn { padding: 12px 6px; }
+  .sr-file { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+  .ph-day { margin-top: 14px; }
+  .ph-day-h { font-size: .85rem; color: var(--muted); margin-bottom: 6px; }
+  .ph-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .ph-thumb { position: relative; padding: 0; border: none; border-radius: 10px; overflow: hidden; aspect-ratio: 3 / 4; background: var(--line); cursor: pointer; }
+  .ph-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .ph-thumb span { position: absolute; left: 6px; bottom: 6px; background: var(--overlay); color: #fff; font-size: .7rem; font-weight: 600; padding: 2px 6px; border-radius: 6px; }
+  .ph-empty { aspect-ratio: 3 / 4; border: 1.5px dashed var(--line); border-radius: 10px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 6px; color: var(--muted); font-size: .75rem; }
+  .ph-lock { font-size: .8rem; margin: 12px 0 0; }
+  .ph-overlay { position: fixed; inset: 0; background: var(--overlay); z-index: 35; display: flex; align-items: center; justify-content: center;
+    padding-block: calc(12px + env(safe-area-inset-top, 0px)) calc(12px + env(safe-area-inset-bottom, 0px));
+    padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: max(12px, env(safe-area-inset-right, 0px)); }
+  .ph-box { background: var(--card); color: var(--text); border-radius: 16px; padding: 12px; width: 100%; max-width: 560px; max-height: 100%; overflow: auto; display: grid; gap: 10px; }
+  .ph-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .ph-big { width: 100%; max-height: 68vh; object-fit: contain; border-radius: 10px; background: var(--bg); display: block; }
+  .ph-acts { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+  .ph-acts:empty { display: none; }
+  .ph-cmp-wrap { display: grid; gap: 10px; }
+  .ph-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .ph-tabs .btn { padding: 8px 4px; }
+  .ph-tabs .btn.on { background: var(--accent); color: var(--on-accent); }
+  .ph-cmp { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .ph-cmp figure { margin: 0; display: grid; gap: 6px; align-content: start; }
+  .ph-cmp img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 10px; background: var(--bg); display: block; }
+  .ph-cmp select { font: inherit; font-size: .85rem; padding: 6px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text); width: 100%; }
   .m-msg.err { color: var(--accent); font-weight: 600; }
   .del { background: none; border: none; color: var(--muted); font-size: 1.05rem; padding: 6px; cursor: pointer; }
   a { color: var(--accent); }
@@ -253,6 +280,21 @@
     <div class="hist" id="m-list"></div>
   </div>
 
+  <h2>Photos de progrès</h2>
+  <div class="card">
+    <p class="muted" style="margin:0 0 10px">Toutes les 4 semaines, le jour de tes mesures : face, profil et dos. Même endroit, même lumière, même tenue. Pose le téléphone à hauteur des hanches et utilise le retardateur.</p>
+    <div class="ph-add" id="ph-add">
+      <button class="btn ghost" data-angle="front">+ Face</button>
+      <button class="btn ghost" data-angle="side">+ Profil</button>
+      <button class="btn ghost" data-angle="back">+ Dos</button>
+    </div>
+    <input type="file" id="ph-input" class="sr-file" accept="image/*" tabindex="-1" aria-hidden="true">
+    <p class="muted m-msg" id="ph-msg"></p>
+    <div id="ph-days"></div>
+    <button id="ph-compare" class="btn ghost" style="width:100%;margin-top:12px" hidden>Comparer avant / après</button>
+    <p class="muted ph-lock">🔒 Les photos restent seulement sur ce téléphone et ne sont pas sauvegardées sur iCloud. Ouvre une photo et touche « Enregistrer dans Photos » pour en garder une copie.</p>
+  </div>
+
   <h2 id="warm-title">Échauffement · 4 min, sans poids</h2>
   <ol class="exercises" id="warm-list"></ol>
 
@@ -317,6 +359,14 @@
       <button id="p-play" aria-label="Pause">❚❚</button>
       <button id="p-next" aria-label="Suivant">⏭</button>
     </div>
+  </div>
+</div>
+
+<div id="ph-view" class="ph-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="ph-title">
+  <div class="ph-box">
+    <div class="ph-head"><b id="ph-title"></b><button class="icon-btn" id="ph-close" aria-label="Fermer">✕</button></div>
+    <div id="ph-content"></div>
+    <div class="ph-acts" id="ph-acts"></div>
   </div>
 </div>
 
@@ -902,8 +952,212 @@ $("#m-save").onclick = () => {
   setTimeout(() => { $("#m-save").textContent = "Enregistrer les mesures"; }, 2000);
 };
 
+// ---------- Progress photos ----------
+// Stored on this device only, in IndexedDB (too large for localStorage), resized to 1200 px JPEG.
+const ANGLES = { front: "Face", side: "Profil", back: "Dos" };
+const PH = { db: null, urls: [], angle: null };
+
+function phDb() {
+  return new Promise((res, rej) => {
+    if (PH.db) return res(PH.db);
+    const rq = indexedDB.open("fessiers-photos", 1);
+    rq.onupgradeneeded = () => rq.result.createObjectStore("photos", { keyPath: "id", autoIncrement: true });
+    rq.onsuccess = () => res(PH.db = rq.result);
+    rq.onerror = () => rej(rq.error);
+  });
+}
+function phTx(mode, fn) {
+  return phDb().then(db => new Promise((res, rej) => {
+    const tx = db.transaction("photos", mode);
+    const rq = fn(tx.objectStore("photos"));
+    tx.oncomplete = () => res(rq && rq.result);
+    tx.onerror = () => rej(tx.error);
+  }));
+}
+const phAll = () => phTx("readonly", st => st.getAll());
+const phPut = rec => phTx("readwrite", st => st.put(rec));
+const phDel = id => phTx("readwrite", st => st.delete(id));
+
+async function shrink(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    const sc = Math.min(1, 1200 / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement("canvas");
+    c.width = Math.round(img.naturalWidth * sc);
+    c.height = Math.round(img.naturalHeight * sc);
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    return await new Promise(r => c.toBlob(r, "image/jpeg", 0.82));
+  } finally { URL.revokeObjectURL(url); }
+}
+
+const phUrl = blob => { const u = URL.createObjectURL(blob); PH.urls.push(u); return u; };
+function phDays(photos) {
+  const days = new Map();
+  photos.forEach(p => {
+    const d = startOfDay(p.date);
+    if (!days.has(d)) days.set(d, {});
+    days.get(d)[p.angle] = p;
+  });
+  return [...days.entries()].sort((a, b) => a[0] - b[0]);
+}
+
+async function renderPhotos() {
+  let photos;
+  try { photos = await phAll(); }
+  catch {
+    $("#ph-msg").textContent = "Les photos ne sont pas disponibles dans ce navigateur.";
+    $("#ph-add").hidden = true;
+    return;
+  }
+  PH.urls.forEach(u => URL.revokeObjectURL(u));
+  PH.urls = [];
+  const days = phDays(photos);
+  const box = $("#ph-days");
+  box.innerHTML = "";
+  days.slice().reverse().forEach(([day, set]) => {
+    const wrap = document.createElement("div");
+    wrap.className = "ph-day";
+    wrap.innerHTML = `<div class="ph-day-h">${fmtDate(day)}</div>`;
+    const grid = document.createElement("div");
+    grid.className = "ph-grid";
+    Object.entries(ANGLES).forEach(([a, label]) => {
+      const p = set[a];
+      if (p) {
+        const b = document.createElement("button");
+        b.className = "ph-thumb";
+        b.setAttribute("aria-label", `${label}, ${fmtDate(day)}`);
+        b.innerHTML = `<img src="${phUrl(p.blob)}" alt=""><span>${label}</span>`;
+        b.onclick = () => openPhoto(p);
+        grid.appendChild(b);
+      } else {
+        const e = document.createElement("div");
+        e.className = "ph-empty";
+        e.textContent = label;
+        grid.appendChild(e);
+      }
+    });
+    wrap.appendChild(grid);
+    box.appendChild(wrap);
+  });
+  $("#ph-compare").hidden = days.length < 2;
+  PH.days = days;
+}
+
+document.querySelectorAll("#ph-add button").forEach(b => {
+  b.onclick = () => { PH.angle = b.dataset.angle; $("#ph-input").value = ""; $("#ph-input").click(); };
+});
+$("#ph-input").onchange = async () => {
+  const file = $("#ph-input").files[0];
+  if (!file) return;
+  const msg = $("#ph-msg");
+  msg.classList.remove("err");
+  msg.textContent = "Enregistrement…";
+  try {
+    const blob = await shrink(file);
+    const today = startOfDay(Date.now());
+    // One photo per angle per day: a new one replaces today's.
+    const old = (await phAll()).find(p => p.angle === PH.angle && startOfDay(p.date) === today);
+    if (old) await phDel(old.id);
+    await phPut({ date: Date.now(), angle: PH.angle, blob });
+    try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch {}
+    msg.textContent = `Photo « ${ANGLES[PH.angle]} » enregistrée.`;
+  } catch {
+    msg.textContent = "Impossible d'enregistrer la photo. Réessaie avec une autre image.";
+    msg.classList.add("err");
+  }
+  renderPhotos();
+};
+
+// ---------- Photo viewer ----------
+function showViewer(title, content, actions) {
+  $("#ph-title").textContent = title;
+  const c = $("#ph-content");
+  c.innerHTML = "";
+  c.appendChild(content);
+  const acts = $("#ph-acts");
+  acts.innerHTML = "";
+  actions.forEach(([label, fn, ghost]) => {
+    const b = document.createElement("button");
+    b.className = "btn" + (ghost ? " ghost" : "");
+    b.textContent = label;
+    b.onclick = fn;
+    acts.appendChild(b);
+  });
+  $("#ph-view").hidden = false;
+}
+const closeViewer = () => { $("#ph-view").hidden = true; };
+$("#ph-close").onclick = closeViewer;
+
+function photoFile(p) {
+  const d = new Date(p.date);
+  const stamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return new File([p.blob], `progres-${stamp}-${ANGLES[p.angle].toLowerCase()}.jpg`, { type: "image/jpeg" });
+}
+
+function openPhoto(p) {
+  const img = document.createElement("img");
+  img.className = "ph-big";
+  img.src = phUrl(p.blob);
+  img.alt = `${ANGLES[p.angle]}, ${fmtDate(p.date)}`;
+  const actions = [];
+  const file = photoFile(p);
+  // iOS share sheet offers "Enregistrer l'image" to copy it into Photos (and iCloud).
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    actions.push(["Enregistrer dans Photos", () => navigator.share({ files: [file] }).catch(() => {}), true]);
+  }
+  actions.push(["Supprimer", async () => {
+    if (await ask("Supprimer cette photo ? Elle sera effacée de l'app.", "Supprimer")) {
+      await phDel(p.id); closeViewer(); renderPhotos();
+    }
+  }, true]);
+  showViewer(`${ANGLES[p.angle]} · ${fmtDate(p.date)}`, img, actions);
+}
+
+function openCompare(angle = "side") {
+  const days = PH.days;
+  const wrap = document.createElement("div");
+  wrap.className = "ph-cmp-wrap";
+  const tabs = document.createElement("div");
+  tabs.className = "ph-tabs";
+  Object.entries(ANGLES).forEach(([a, label]) => {
+    const b = document.createElement("button");
+    b.className = "btn ghost" + (a === angle ? " on" : "");
+    b.textContent = label;
+    b.onclick = () => openCompare(a);
+    tabs.appendChild(b);
+  });
+  wrap.appendChild(tabs);
+  const grid = document.createElement("div");
+  grid.className = "ph-cmp";
+  [0, days.length - 1].forEach((start, col) => {
+    const fig = document.createElement("figure");
+    const sel = document.createElement("select");
+    sel.id = "ph-cmp-" + col;
+    sel.setAttribute("aria-label", col ? "Après" : "Avant");
+    days.forEach(([day], i) => sel.add(new Option(fmtDate(day), i, false, i === start)));
+    const slot = document.createElement("div");
+    const show = () => {
+      const p = days[sel.value][1][angle];
+      slot.innerHTML = p ? `<img src="${phUrl(p.blob)}" alt="${ANGLES[angle]}, ${fmtDate(p.date)}">`
+        : `<div class="ph-empty">Pas de photo « ${ANGLES[angle]} » ce jour-là</div>`;
+    };
+    sel.onchange = show;
+    show();
+    fig.innerHTML = `<figcaption class="muted">${col ? "Après" : "Avant"}</figcaption>`;
+    fig.append(sel, slot);
+    grid.appendChild(fig);
+  });
+  wrap.appendChild(grid);
+  showViewer("Avant / après", wrap, []);
+}
+$("#ph-compare").onclick = () => openCompare();
+
 renderHome();
 renderMeasures();
+renderPhotos();
 </script>
 </body>
 </html>
