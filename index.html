@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#c2477a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Fessiers">
+<title>Fessiers aux haltères</title>
+<style>
+  /* Layout: one column, phone-first. Home = overview + history; Player = full-screen guided timer. */
+  :root {
+    --bg: #fbf6f8;
+    --card: #ffffff;
+    --text: #2a1f25;
+    --muted: #7d6b74;
+    --line: #eadde3;
+    --accent: #c2477a;
+    --accent-soft: #f7e1ea;
+    --rest: #2f8f68;
+    --rest-soft: #dcf1e7;
+    --prep: #b7791f;
+    --prep-soft: #f8ecd6;
+    --overlay: rgba(20, 10, 16, .45);
+    --on-accent: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #17121a; --card: #221b25; --text: #f3eaf0; --muted: #a8939f; --line: #3a2f3d;
+      --accent: #ec79a7; --accent-soft: #3d2332; --rest: #5cc99a; --rest-soft: #1d3a2e;
+      --prep: #e3b25c; --prep-soft: #3a2f1c; --overlay: rgba(0, 0, 0, .6); --on-accent: #1a1016;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #17121a; --card: #221b25; --text: #f3eaf0; --muted: #a8939f; --line: #3a2f3d;
+    --accent: #ec79a7; --accent-soft: #3d2332; --rest: #5cc99a; --rest-soft: #1d3a2e;
+    --prep: #e3b25c; --prep-soft: #3a2f1c; --overlay: rgba(0, 0, 0, .6); --on-accent: #1a1016;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  [hidden] { display: none !important; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .wrap {
+    max-width: 560px; margin: 0 auto;
+    padding-block: calc(16px + env(safe-area-inset-top, 0px)) calc(32px + env(safe-area-inset-bottom, 0px));
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  h1 { font-size: 1.7rem; line-height: 1.15; margin: 4px 0 6px; letter-spacing: -.02em; text-wrap: balance; }
+  h2 { font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 26px 0 8px; }
+  .eyebrow { font-size: .8rem; color: var(--accent); font-weight: 600; }
+  .muted { color: var(--muted); font-size: .9rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .chip { background: var(--accent-soft); color: var(--accent); border-radius: 999px; padding: 4px 10px; font-size: .82rem; font-weight: 600; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+  .btn {
+    font: inherit; font-weight: 700; border: none; border-radius: 14px; padding: 12px 16px; cursor: pointer;
+    background: var(--accent); color: var(--on-accent);
+  }
+  .btn.ghost { background: var(--accent-soft); color: var(--accent); }
+  .btn.big { width: 100%; padding: 18px; font-size: 1.1rem; margin-top: 18px; }
+  .btn:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+  ol.exercises { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  ol.exercises li { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+  ol.exercises .top { display: flex; gap: 10px; align-items: baseline; }
+  ol.exercises .n { color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
+  ol.exercises b { font-size: 1rem; }
+  ol.exercises .en { color: var(--muted); font-size: .82rem; }
+  ol.exercises p { margin: 4px 0 0; font-size: .88rem; color: var(--muted); }
+  .anim { display: block; width: 100%; max-width: 100%; aspect-ratio: 16 / 9; border-radius: 10px; background: var(--accent-soft); margin-bottom: 10px; }
+  .watch { display: inline-block; margin-top: 8px; font-size: .85rem; font-weight: 600; text-decoration: none; }
+
+  .rounds { display: grid; gap: 8px; }
+  .round { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; }
+  .round .k { grid-row: span 2; width: 28px; height: 28px; border-radius: 14px; background: var(--accent-soft); color: var(--accent);
+    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .85rem; }
+  .round b { font-size: .95rem; }
+  .round span { font-size: .85rem; color: var(--muted); }
+
+  .settings { display: grid; gap: 10px; }
+  .settings .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .settings label { font-size: .92rem; }
+  input[type=number], input[type=text] {
+    font: inherit; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--bg); color: var(--text); width: 84px; text-align: right;
+  }
+  input[type=text] { width: 100%; text-align: left; }
+  input[type=checkbox] { width: 22px; height: 22px; accent-color: var(--accent); }
+
+  .week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+  .week .d { font-size: .72rem; color: var(--muted); }
+  .week .dot { width: 32px; height: 32px; margin: 4px auto 0; border-radius: 16px; border: 2px solid var(--line);
+    display: flex; align-items: center; justify-content: center; font-size: .82rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .week .dot.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .week .dot.today { border-color: var(--accent); }
+  .hist { margin-top: 10px; }
+  .hist-item { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 0; border-top: 1px solid var(--line); }
+  .hist-item .s { font-size: .82rem; color: var(--muted); }
+  .del { background: none; border: none; color: var(--muted); font-size: 1.05rem; padding: 6px; cursor: pointer; }
+  a { color: var(--accent); }
+
+  /* ---------- Player ---------- */
+  #player {
+    position: fixed; inset: 0; background: var(--bg); z-index: 20; display: flex; flex-direction: column;
+    padding-block: calc(12px + env(safe-area-inset-top, 0px)) calc(20px + env(safe-area-inset-bottom, 0px));
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+    --phase: var(--accent); --phase-soft: var(--accent-soft);
+  }
+  #player.rest { --phase: var(--rest); --phase-soft: var(--rest-soft); }
+  #player.prep { --phase: var(--prep); --phase-soft: var(--prep-soft); }
+  #player .inner { max-width: 560px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  .p-top { display: flex; align-items: center; gap: 10px; }
+  .p-top .where { flex: 1; font-size: .85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .icon-btn { width: 40px; height: 40px; border-radius: 20px; border: 1px solid var(--line); background: var(--card); color: var(--text); font-size: 1.1rem; cursor: pointer; }
+  .bar { height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; margin-top: 10px; }
+  .bar > div { height: 100%; background: var(--phase); width: 0; }
+  .p-main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 10px; min-height: 0; }
+  .phase { background: var(--phase-soft); color: var(--phase); border-radius: 999px; padding: 5px 14px; font-weight: 800; letter-spacing: .1em; font-size: .8rem; }
+  .p-name { font-size: 1.8rem; font-weight: 800; line-height: 1.1; letter-spacing: -.02em; text-wrap: balance; margin: 0; }
+  .p-en { color: var(--muted); font-size: .9rem; margin-top: -6px; }
+  .p-mode { font-weight: 700; color: var(--phase); }
+  .ring { position: relative; width: min(62vw, 260px, 34vh); aspect-ratio: 1; max-width: 100%; }
+  #player.has-anim .ring { width: min(44vw, 190px, 24vh); }
+  #player.has-anim .ring .t { font-size: clamp(2.4rem, 12vw, 3.6rem); }
+  .p-anim { width: min(100%, 420px, 46vh); aspect-ratio: 16 / 9; height: auto; border-radius: 14px; background: var(--phase-soft); flex: none; }
+  .ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring circle { fill: none; stroke-width: 10; }
+  .ring .track { stroke: var(--line); }
+  .ring .prog { stroke: var(--phase); stroke-linecap: round; }
+  .ring .t { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: clamp(3rem, 18vw, 5rem); font-weight: 800; font-variant-numeric: tabular-nums; }
+  .p-cue { font-size: .95rem; color: var(--muted); max-width: 36ch; margin: 0; }
+  .p-next { font-size: .9rem; }
+  .p-ctrls { display: flex; justify-content: center; align-items: center; gap: 22px; margin-top: 8px; }
+  .p-ctrls button { width: 56px; height: 56px; border-radius: 28px; border: 1px solid var(--line); background: var(--card); color: var(--text); font-size: 1.2rem; cursor: pointer; }
+  .p-ctrls #p-play { width: 76px; height: 76px; border-radius: 38px; background: var(--phase); border: none; color: var(--on-accent); font-size: 1.6rem; }
+
+  #done { text-align: center; }
+  #done .big { font-size: 3rem; }
+
+  #dialog { position: fixed; inset: 0; background: var(--overlay); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 40; }
+  #dialog .box { background: var(--card); color: var(--text); border-radius: 16px; padding: 18px; width: 100%; max-width: 360px; }
+  #dialog p { margin: 0 0 14px; }
+  #dialog .acts { display: flex; gap: 8px; justify-content: flex-end; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .bar > div { transition: width .25s linear; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ---------- HOME ---------- -->
+<div id="home" class="wrap">
+  <div class="eyebrow">Caroline Girvan · à la maison</div>
+  <h1>Fessiers aux haltères</h1>
+  <div class="muted">Un entraînement complet pour les fessiers et les ischios, haltères seulement. Rythme lent : serre les fessiers, pousse dans les talons et descends le plus bas possible.</div>
+  <div class="chips">
+    <span class="chip" id="chip-time">18 min</span>
+    <span class="chip">6 exercices</span>
+    <span class="chip">3 tours chacun</span>
+    <span class="chip" id="chip-interval">45 s / 15 s</span>
+  </div>
+  <button id="start" class="btn big">▶ Commencer la séance</button>
+
+  <h2>Cette semaine</h2>
+  <div class="card">
+    <div class="week" id="week"></div>
+    <div class="hist" id="hist"></div>
+  </div>
+
+  <h2>Les 6 exercices</h2>
+  <ol class="exercises" id="ex-list"></ol>
+
+  <h2>Les 3 tours de chaque exercice</h2>
+  <div class="card rounds" id="rounds"></div>
+
+  <h2>Réglages</h2>
+  <div class="card settings">
+    <div class="row"><label for="set-work">Effort (secondes)</label><input id="set-work" type="number" min="15" max="120" step="5"></div>
+    <div class="row"><label for="set-rest">Repos (secondes)</label><input id="set-rest" type="number" min="5" max="120" step="5"></div>
+    <div class="row"><label for="set-voice">Annonces vocales</label><input id="set-voice" type="checkbox"></div>
+    <div class="muted">L'écran reste allumé pendant la séance quand ton téléphone le permet.</div>
+  </div>
+
+  <p class="muted" style="margin-top:22px">Vidéo d'origine : <a href="https://www.youtube.com/watch?v=VjGOiFr5oAk" target="_blank" rel="noopener">at Home GLUTE WORKOUT | Dumbbells Only & Booty Focused</a></p>
+</div>
+
+<!-- ---------- PLAYER ---------- -->
+<div id="player" hidden>
+  <div class="inner">
+    <div class="p-top">
+      <button class="icon-btn" id="p-quit" aria-label="Quitter">✕</button>
+      <div class="where" id="p-where"></div>
+      <div class="where" id="p-left" style="flex:none"></div>
+    </div>
+    <div class="bar"><div id="p-bar"></div></div>
+
+    <div class="p-main" id="p-main">
+      <canvas class="p-anim" id="p-anim" role="img"></canvas>
+      <div class="phase" id="p-phase">EFFORT</div>
+      <h2 class="p-name" id="p-name" style="text-transform:none;letter-spacing:-.02em;color:var(--text)"></h2>
+      <div class="p-en" id="p-en"></div>
+      <div class="p-mode" id="p-mode"></div>
+      <div class="ring">
+        <svg viewBox="0 0 120 120" aria-hidden="true">
+          <circle class="track" cx="60" cy="60" r="52"></circle>
+          <circle class="prog" id="p-ring" cx="60" cy="60" r="52"></circle>
+        </svg>
+        <div class="t" id="p-time">0</div>
+      </div>
+      <p class="p-cue" id="p-cue"></p>
+    </div>
+
+    <div id="done" hidden>
+      <div class="big">🍑</div>
+      <h2 class="p-name" style="text-transform:none;letter-spacing:-.02em;color:var(--text)">Séance terminée !</h2>
+      <p class="muted" id="done-sum"></p>
+      <div class="card" style="text-align:left;margin-top:12px">
+        <label for="done-weight" class="muted">Poids des haltères utilisés</label>
+        <input id="done-weight" type="text" placeholder="ex. 2 × 10 lb" style="margin-top:6px">
+        <div class="muted" id="done-last" style="margin-top:6px"></div>
+      </div>
+      <button id="done-save" class="btn big">Enregistrer</button>
+    </div>
+
+    <div class="p-ctrls" id="p-ctrls">
+      <button id="p-prev" aria-label="Précédent">⏮</button>
+      <button id="p-play" aria-label="Pause">❚❚</button>
+      <button id="p-next" aria-label="Suivant">⏭</button>
+    </div>
+  </div>
+</div>
+
+<div id="dialog" hidden role="dialog" aria-modal="true">
+  <div class="box">
+    <p id="dlg-msg"></p>
+    <div class="acts">
+      <button id="dlg-no" class="btn ghost">Annuler</button>
+      <button id="dlg-yes" class="btn">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------- Workout (from the video description and chapters) ----------
+const VIDEO = "https://www.youtube.com/watch?v=VjGOiFr5oAk";
+const EXERCISES = [
+  { name: "Squat", en: "High squat", t: 192, anim: "squat",
+    cue: "Pieds largeur d'épaules, haltères aux épaules. Descends en poussant les hanches vers l'arrière, remonte en poussant dans les talons." },
+  { name: "Squat sumo bas", en: "Low sumo squat", t: 372, anim: "sumo",
+    cue: "Pieds très écartés, pointes vers l'extérieur, un haltère tenu entre les jambes. Descends bas, genoux dans l'axe des pieds." },
+  { name: "Soulevé de terre sumo", en: "Sumo squat deadlift", t: 552, anim: "sumodl",
+    cue: "Position sumo, haltère jusqu'au sol, dos plat. Remonte en serrant fort les fessiers en haut." },
+  { name: "Soulevé de terre roumain", en: "Romanian deadlift", t: 732, anim: "rdl",
+    cue: "Genoux légèrement fléchis, pousse les hanches loin derrière, haltères le long des jambes. Sens l'étirement des ischios, dos plat." },
+  { name: "Fente latérale alternée", en: "Side to side lunge", t: 912, anim: "lunge",
+    cue: "Grand pas sur le côté, hanches vers l'arrière, genou au-dessus du pied. Pousse dans le talon pour revenir, puis change de côté." },
+  { name: "Pont fessier", en: "Glute bridge", t: 1092, anim: "bridge",
+    cue: "Sur le dos, haltère sur les hanches. Pousse dans les talons et serre les fessiers en haut, sans cambrer le bas du dos." },
+];
+const ROUNDS = [
+  { label: "Répétitions complètes", say: "répétitions complètes", hint: "Amplitude complète, lent et contrôlé." },
+  { label: "Pulsations", say: "pulsations", hint: "Reste dans la partie basse du mouvement et fais de petites pulsations, sans remonter complètement." },
+  { label: "5 pulsations + 1 rép", say: "cinq pulsations, une répétition", hint: "5 petites pulsations en bas, puis 1 répétition complète. Recommence jusqu'à la fin." },
+];
+const PREP_SEC = 10;
+
+// ---------- Storage (fails soft) ----------
+const KEY = "fessiers-halteres-v1";
+function load() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } }
+const state = Object.assign({ history: [], settings: { work: 45, rest: 15, voice: true } }, load());
+function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} }
+
+const $ = s => document.querySelector(s);
+const DAY = 86400000;
+const startOfDay = t => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
+const startOfWeek = t => { const d = startOfDay(t); return d - ((new Date(d).getDay() + 6) % 7) * DAY; };
+const fmtDate = t => new Date(t).toLocaleDateString("fr-CA", { weekday: "short", day: "numeric", month: "short" });
+const fmtClock = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+
+// ---------- In-page dialog (alert/confirm are blocked in some viewers) ----------
+function ask(msg, yes = "Confirmer") {
+  return new Promise(res => {
+    $("#dlg-msg").textContent = msg;
+    $("#dlg-yes").textContent = yes;
+    $("#dialog").hidden = false;
+    const close = v => { $("#dialog").hidden = true; res(v); };
+    $("#dlg-yes").onclick = () => close(true);
+    $("#dlg-no").onclick = () => close(false);
+  });
+}
+
+// ---------- Sound, voice, screen ----------
+let audio;
+function unlockAudio() {
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    if (audio.state === "suspended") audio.resume();
+  } catch {}
+}
+function tone(freq, dur, when = 0) {
+  if (!audio) return;
+  try {
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.frequency.value = freq; o.connect(g); g.connect(audio.destination);
+    const t = audio.currentTime + when;
+    g.gain.setValueAtTime(0.25, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.start(t); o.stop(t + dur);
+  } catch {}
+}
+let frVoice = null;
+function pickVoice() {
+  try { frVoice = speechSynthesis.getVoices().find(v => /^fr/i.test(v.lang)) || null; } catch {}
+}
+if ("speechSynthesis" in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+function say(text) {
+  if (!state.settings.voice || !("speechSynthesis" in window)) return;
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "fr-FR"; if (frVoice) u.voice = frVoice; u.rate = 1.05;
+    speechSynthesis.speak(u);
+  } catch {}
+}
+let wakeLock = null;
+async function keepAwake(on) {
+  try {
+    if (on && "wakeLock" in navigator && document.visibilityState === "visible") {
+      if (!wakeLock || wakeLock.released) wakeLock = await navigator.wakeLock.request("screen");
+    } else if (!on && wakeLock) { await wakeLock.release(); wakeLock = null; }
+  } catch {}
+}
+document.addEventListener("visibilitychange", () => { if (!$("#player").hidden) keepAwake(true); });
+
+// ---------- Movement animations ----------
+// Stick figure in a 200×116 box (floor at y=110). Each exercise has a start pose A and a
+// working pose B; pulses happen near B. Poses list joint positions; frames interpolate them.
+// Side views face right; the far leg and arm are drawn lighter.
+const FLOOR = 110;
+const mirror = pose => Object.fromEntries(Object.entries(pose).map(([k, v]) => [k.replace(/L$/, "_").replace(/R$/, "L").replace(/_$/, "R"), [200 - v[0], v[1]]]));
+const POSES = {
+  squat: { view: "side", db: "shoulder",
+    A: { head: [101, 9], sh: [100, 20], hip: [99, 54], knee: [100, 82], ank: [100, 110], toe: [111, 110], elb: [110, 33], hand: [108, 19] },
+    B: { head: [116, 47], sh: [110, 57], hip: [91, 84], knee: [118, 89], ank: [100, 110], toe: [111, 110], elb: [121, 68], hand: [119, 54] } },
+  rdl: { view: "side", db: "hand",
+    A: { head: [101, 9], sh: [100, 20], hip: [99, 54], knee: [101, 82], ank: [100, 110], toe: [111, 110], elb: [101, 38], hand: [101, 55] },
+    B: { head: [128, 45], sh: [117, 48], hip: [84, 57], knee: [105, 83], ank: [100, 110], toe: [111, 110], elb: [117, 66], hand: [117, 84] } },
+  sumo: { view: "front", db: "center",
+    A: { head: [100, 11], shL: [88, 24], shR: [112, 24], hipL: [92, 56], hipR: [108, 56], kneeL: [80, 83], kneeR: [120, 83], ankL: [70, 110], ankR: [130, 110],
+         elbL: [93, 43], elbR: [107, 43], hand: [100, 60] },
+    B: { head: [100, 39], shL: [88, 52], shR: [112, 52], hipL: [92, 82], hipR: [108, 82], kneeL: [66, 86], kneeR: [134, 86], ankL: [70, 110], ankR: [130, 110],
+         elbL: [93, 71], elbR: [107, 71], hand: [100, 88] } },
+  sumodl: { view: "front", db: "center",
+    A: { head: [100, 11], shL: [88, 24], shR: [112, 24], hipL: [92, 56], hipR: [108, 56], kneeL: [80, 83], kneeR: [120, 83], ankL: [70, 110], ankR: [130, 110],
+         elbL: [93, 43], elbR: [107, 43], hand: [100, 60] },
+    B: { head: [100, 50], shL: [87, 59], shR: [113, 59], hipL: [92, 74], hipR: [108, 74], kneeL: [69, 84], kneeR: [131, 84], ankL: [70, 110], ankR: [130, 110],
+         elbL: [94, 79], elbR: [106, 79], hand: [100, 96] } },
+  lunge: { view: "front", db: "goblet", alternate: true,
+    A: { head: [100, 11], shL: [88, 24], shR: [112, 24], hipL: [92, 56], hipR: [108, 56], kneeL: [79, 83], kneeR: [121, 83], ankL: [65, 110], ankR: [135, 110],
+         elbL: [90, 42], elbR: [110, 42], hand: [100, 36] },
+    B: { head: [113, 30], shL: [102, 43], shR: [126, 43], hipL: [110, 74], hipR: [126, 74], kneeL: [88, 92], kneeR: [138, 86], ankL: [65, 110], ankR: [135, 110],
+         elbL: [104, 62], elbR: [124, 62], hand: [114, 55] } },
+  bridge: { view: "lying", db: "hand",
+    A: { head: [39, 103], sh: [51, 104], hip: [88, 106], knee: [110, 86], ank: [126, 110], toe: [137, 110], elb: [66, 98], hand: [86, 101] },
+    B: { head: [39, 103], sh: [51, 104], hip: [88, 85], knee: [112, 81], ank: [126, 110], toe: [137, 110], elb: [67, 92], hand: [86, 80] } },
+};
+POSES.lunge.B2 = mirror(POSES.lunge.B);
+
+const ease = x => 0.5 - 0.5 * Math.cos(Math.PI * Math.min(1, Math.max(0, x)));
+const pulse = (t, period) => 0.8 + 0.2 * (0.5 + 0.5 * Math.cos(2 * Math.PI * t / period));
+// Returns { k: 0 (start) … 1 (working position), cycle } at time t (seconds).
+// mode 0: slow full reps · 1: pulses · 2: 5 pulses then 1 full rep
+function motion(mode, t) {
+  if (mode === 1) return { k: pulse(t, 0.7), cycle: Math.floor(t / 2.8) };
+  if (mode === 2) {
+    const L = 5.6, c = t % L, cycle = Math.floor(t / L);
+    if (c < 1) return { k: ease(c), cycle };
+    if (c < 4) return { k: pulse(c - 1, 0.6), cycle };
+    if (c < 5) return { k: 1 - ease(c - 4), cycle };
+    return { k: 0, cycle };
+  }
+  const L = 3.4, c = t % L, cycle = Math.floor(t / L);
+  return { k: c < 1.3 ? ease(c / 1.3) : c < 1.6 ? 1 : c < 2.9 ? 1 - ease((c - 1.6) / 1.3) : 0, cycle };
+}
+
+function lerpPose(A, B, k) {
+  const o = {};
+  for (const j in A) o[j] = [A[j][0] + (B[j][0] - A[j][0]) * k, A[j][1] + (B[j][1] - A[j][1]) * k];
+  return o;
+}
+
+const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+function drawFigure(canvas, kind, mode, t) {
+  const def = POSES[kind];
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if (!w || !h) return;
+  if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+    canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+  }
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const sc = Math.min(w / 200, h / 120);
+  ctx.setTransform(dpr * sc, 0, 0, dpr * sc, dpr * (w - 200 * sc) / 2, dpr * (h - 116 * sc) / 2);
+
+  const { k, cycle } = motion(mode, t);
+  const B = def.alternate && cycle % 2 ? def.B2 : def.B;
+  const p = lerpPose(def.A, B, k);
+  const ink = css("--text"), acc = css("--accent"), muted = css("--muted");
+
+  ctx.lineCap = ctx.lineJoin = "round";
+  const seg = (pts, width, alpha = 1, color = ink) => {
+    ctx.globalAlpha = alpha; ctx.strokeStyle = color; ctx.lineWidth = width;
+    ctx.beginPath(); ctx.moveTo(...pts[0]); pts.slice(1).forEach(q => ctx.lineTo(...q)); ctx.stroke();
+    ctx.globalAlpha = 1;
+  };
+  seg([[10, FLOOR + 2], [190, FLOOR + 2]], 1.2, 0.5, muted);
+  const box = (cx, cy, ww, hh) => { ctx.beginPath(); ctx.rect(cx - ww / 2, cy - hh / 2, ww, hh); ctx.fill(); };
+  const dumbbell = (x, y, vertical) => {
+    ctx.fillStyle = acc;
+    if (vertical) { box(x, y, 2, 12); box(x, y - 6, 7, 3.5); box(x, y + 6, 7, 3.5); }
+    else { box(x, y, 12, 2); box(x - 6, y, 3.5, 7); box(x + 6, y, 3.5, 7); }
+  };
+  const head = q => { ctx.fillStyle = ink; ctx.beginPath(); ctx.arc(q[0], q[1], 7, 0, 2 * Math.PI); ctx.fill(); };
+
+  if (def.view === "front") {
+    seg([p.ankL, p.kneeL, p.hipL, p.hipR, p.kneeR, p.ankR], 5);
+    seg([[p.ankL[0] - 7, FLOOR], p.ankL], 4);
+    seg([p.ankR, [p.ankR[0] + 7, FLOOR]], 4);
+    const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+    seg([mid(p.hipL, p.hipR), mid(p.shL, p.shR)], 10);
+    seg([p.shL, p.shR], 5);
+    seg([p.shL, p.elbL, p.hand, p.elbR, p.shR], 4);
+    head(p.head);
+    if (def.db === "goblet") dumbbell(p.hand[0], p.hand[1] - 2, false);
+    else dumbbell(p.hand[0], p.hand[1] + 6, true);
+  } else {
+    if (def.view === "side") {
+      const f = q => [q[0] - 3, q[1]];
+      seg([f(p.toe), f(p.ank), f(p.knee), f(p.hip)], 5, 0.35);
+      seg([f(p.sh), f(p.elb), f(p.hand)], 4, 0.35);
+    }
+    seg([p.toe, p.ank, p.knee, p.hip], 5);
+    seg([p.hip, p.sh], 9);
+    head(p.head);
+    seg([p.sh, p.elb, p.hand], 4);
+    if (def.db === "hand") dumbbell(p.hand[0], p.hand[1] + (def.view === "lying" ? -3 : 2), def.view !== "lying");
+    else dumbbell(p.hand[0], p.hand[1] - 3, false);
+  }
+}
+
+let playerAnim = null;
+const reduceMotion = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+function animLoop(now) {
+  // With reduced motion, hold the working position instead of animating.
+  const t = s => reduceMotion ? 1.4 : s;
+  if (playerAnim && !$("#player").hidden) {
+    drawFigure($("#p-anim"), playerAnim.kind, playerAnim.mode, t((now - playerAnim.start) / 1000));
+  } else if (!$("#home").hidden) {
+    document.querySelectorAll("canvas.anim").forEach(c => {
+      const r = c.getBoundingClientRect();
+      if (r.bottom > 0 && r.top < innerHeight) drawFigure(c, c.dataset.anim, 0, t(now / 1000));
+    });
+  }
+  requestAnimationFrame(animLoop);
+}
+requestAnimationFrame(animLoop);
+
+// ---------- Plan ----------
+function buildPlan() {
+  const { work, rest } = state.settings;
+  const steps = [{ kind: "prep", dur: PREP_SEC, ex: 0, round: 0 }];
+  EXERCISES.forEach((_, ex) => ROUNDS.forEach((_, round) => {
+    steps.push({ kind: "work", dur: work, ex, round });
+    const last = ex === EXERCISES.length - 1 && round === ROUNDS.length - 1;
+    if (!last) {
+      const next = round === ROUNDS.length - 1 ? { ex: ex + 1, round: 0 } : { ex, round: round + 1 };
+      steps.push({ kind: "rest", dur: rest, ...next });
+    }
+  }));
+  return steps;
+}
+const totalSec = steps => steps.reduce((a, s) => a + s.dur, 0);
+
+// ---------- Player ----------
+const RING = 2 * Math.PI * 52;
+$("#p-ring").style.strokeDasharray = RING;
+let P = null; // { steps, idx, endAt, paused, remaining, lastShown, startedAt }
+
+function startWorkout() {
+  unlockAudio();
+  const steps = buildPlan();
+  P = { steps, idx: 0, endAt: 0, paused: false, remaining: 0, lastShown: null, startedAt: Date.now() };
+  $("#home").hidden = true;
+  $("#player").hidden = false;
+  $("#done").hidden = true;
+  $("#p-main").hidden = false;
+  $("#p-ctrls").hidden = false;
+  keepAwake(true);
+  enterStep();
+  P.iv = setInterval(tick, 100);
+}
+
+function enterStep() {
+  const s = P.steps[P.idx];
+  P.endAt = Date.now() + s.dur * 1000;
+  P.remaining = s.dur * 1000;
+  P.lastShown = null;
+  const ex = EXERCISES[s.ex], rd = ROUNDS[s.round];
+  const player = $("#player");
+  player.classList.toggle("rest", s.kind === "rest");
+  player.classList.toggle("prep", s.kind === "prep");
+  $("#p-phase").textContent = { prep: "PRÊTE ?", work: "EFFORT", rest: "REPOS" }[s.kind];
+  $("#p-name").textContent = (s.kind === "work" ? "" : "Ensuite : ") + ex.name;
+  $("#p-en").textContent = ex.en;
+  player.classList.add("has-anim");
+  // Show this round's movement (during rest: the coming round's); prep shows a full rep.
+  playerAnim = { kind: ex.anim, mode: s.kind === "prep" ? 0 : s.round, start: performance.now() };
+  $("#p-anim").setAttribute("aria-label", `${ex.name} : ${rd.label}`);
+  $("#p-mode").textContent = `Tour ${s.round + 1}/3 · ${rd.label}`;
+  $("#p-cue").textContent = s.kind === "work" ? rd.hint : ex.cue;
+  $("#p-where").textContent = `Exercice ${s.ex + 1}/${EXERCISES.length} · tour ${s.round + 1}/3`;
+
+  if (s.kind === "prep") say(`Prépare tes haltères. Premier exercice : ${ex.name}, ${rd.say}.`);
+  else if (s.kind === "work") { tone(988, 0.35); say(s.round === 0 ? `${ex.name}. C'est parti !` : "C'est parti !"); }
+  else { tone(660, 0.35); say(`Repos. Ensuite : ${s.round === 0 ? ex.name + ", " : ""}${rd.say}.`); }
+  render();
+}
+
+function render() {
+  const s = P.steps[P.idx];
+  const leftMs = P.paused ? P.remaining : Math.max(0, P.endAt - Date.now());
+  const left = Math.ceil(leftMs / 1000);
+  $("#p-time").textContent = left;
+  $("#p-ring").style.strokeDashoffset = RING * (1 - leftMs / (s.dur * 1000));
+  const after = P.steps.slice(P.idx + 1).reduce((a, x) => a + x.dur, 0);
+  const total = totalSec(P.steps);
+  $("#p-left").textContent = fmtClock(left + after);
+  $("#p-bar").style.width = (100 * (1 - (leftMs / 1000 + after) / total)) + "%";
+  $("#p-play").textContent = P.paused ? "▶" : "❚❚";
+  $("#p-play").setAttribute("aria-label", P.paused ? "Reprendre" : "Pause");
+  return left;
+}
+
+function tick() {
+  if (!P || P.paused) return;
+  const left = render();
+  if (left !== P.lastShown) {
+    P.lastShown = left;
+    if (left <= 3 && left >= 1) tone(784, 0.12);
+  }
+  if (Date.now() >= P.endAt) advance(1);
+}
+
+function advance(dir) {
+  const ni = P.idx + dir;
+  if (ni < 0) return;
+  if (ni >= P.steps.length) return finish();
+  P.idx = ni;
+  const wasPaused = P.paused;
+  P.paused = false;
+  enterStep();
+  if (wasPaused) { P.paused = true; P.remaining = P.steps[P.idx].dur * 1000; render(); }
+}
+
+function finish() {
+  clearInterval(P.iv);
+  tone(988, 0.2); tone(1319, 0.5, 0.22);
+  say("Bravo ! Séance terminée.");
+  P.finished = true;
+  $("#p-main").hidden = true;
+  $("#p-ctrls").hidden = true;
+  $("#done").hidden = false;
+  $("#player").classList.remove("rest", "prep", "has-anim");
+  playerAnim = null;
+  $("#p-bar").style.width = "100%";
+  $("#p-left").textContent = "0:00";
+  $("#p-where").textContent = "Terminé";
+  const mins = Math.round((Date.now() - P.startedAt) / 60000);
+  $("#done-sum").textContent = `${EXERCISES.length} exercices × 3 tours en ${mins} min.`;
+  const last = state.history.slice().reverse().find(h => h.weight);
+  $("#done-weight").value = last ? last.weight : "";
+  $("#done-last").textContent = last ? `Dernière fois : ${last.weight}` : "";
+}
+
+function closePlayer() {
+  if (P) clearInterval(P.iv);
+  P = null;
+  try { speechSynthesis.cancel(); } catch {}
+  keepAwake(false);
+  $("#player").hidden = true;
+  $("#home").hidden = false;
+  renderHome();
+  window.scrollTo(0, 0);
+}
+
+$("#start").onclick = startWorkout;
+$("#p-play").onclick = () => {
+  unlockAudio();
+  if (P.paused) { P.paused = false; P.endAt = Date.now() + P.remaining; }
+  else { P.paused = true; P.remaining = Math.max(0, P.endAt - Date.now()); try { speechSynthesis.cancel(); } catch {} }
+  render();
+};
+$("#p-next").onclick = () => advance(1);
+$("#p-prev").onclick = () => {
+  const s = P.steps[P.idx];
+  const elapsed = s.dur * 1000 - (P.paused ? P.remaining : P.endAt - Date.now());
+  if (elapsed > 3000 || P.idx === 0) advance(0); else advance(-1);
+};
+$("#p-quit").onclick = async () => {
+  if (P && P.finished) return closePlayer();
+  const wasPaused = P.paused;
+  if (!wasPaused) $("#p-play").onclick();
+  if (await ask("Quitter la séance ? Elle ne sera pas enregistrée.", "Quitter")) closePlayer();
+  else if (!wasPaused) $("#p-play").onclick();
+};
+$("#done-save").onclick = () => {
+  state.history.push({ date: Date.now(), weight: $("#done-weight").value.trim() });
+  save();
+  closePlayer();
+};
+
+// ---------- Home ----------
+function renderHome() {
+  const steps = buildPlan();
+  $("#chip-time").textContent = `${Math.round(totalSec(steps) / 60)} min`;
+  $("#chip-interval").textContent = `${state.settings.work} s effort / ${state.settings.rest} s repos`;
+
+  const wk = startOfWeek(Date.now());
+  const trained = new Set(state.history.map(h => startOfDay(h.date)));
+  const letters = ["L", "M", "M", "J", "V", "S", "D"];
+  $("#week").innerHTML = letters.map((l, i) => {
+    const t = wk + i * DAY;
+    const cls = ["dot", trained.has(startOfDay(t)) ? "on" : "", startOfDay(Date.now()) === t ? "today" : ""].join(" ");
+    return `<div><div class="d">${l}</div><div class="${cls}">${new Date(t).getDate()}</div></div>`;
+  }).join("");
+
+  const hist = $("#hist");
+  hist.innerHTML = "";
+  if (!state.history.length) {
+    hist.innerHTML = `<p class="muted" style="margin:10px 0 0">Aucune séance enregistrée. Termine ta première séance pour la voir ici.</p>`;
+    return;
+  }
+  state.history.slice(-10).reverse().forEach(h => {
+    const row = document.createElement("div");
+    row.className = "hist-item";
+    row.innerHTML = `<div><div>${fmtDate(h.date)}</div><div class="s">${h.weight ? "Haltères : " + h.weight.replace(/</g, "&lt;") : "Séance complète"}</div></div>`;
+    const del = document.createElement("button");
+    del.className = "del"; del.textContent = "🗑"; del.setAttribute("aria-label", "Supprimer");
+    del.onclick = async () => {
+      if (await ask("Supprimer cette séance ?", "Supprimer")) {
+        state.history.splice(state.history.indexOf(h), 1); save(); renderHome();
+      }
+    };
+    row.appendChild(del);
+    hist.appendChild(row);
+  });
+}
+
+$("#ex-list").innerHTML = EXERCISES.map((e, i) => `<li>
+  <canvas class="anim" data-anim="${e.anim}" role="img" aria-label="${e.name} : une répétition"></canvas>
+  <div class="top"><span class="n">${i + 1}</span><div><b>${e.name}</b> <span class="en">· ${e.en}</span></div></div>
+  <p>${e.cue}</p>
+  <a class="watch" href="${VIDEO}&t=${e.t}s" target="_blank" rel="noopener">▶ Voir dans la vidéo (${fmtClock(e.t)})</a></li>`).join("");
+$("#rounds").innerHTML = ROUNDS.map((r, i) =>
+  `<div class="round"><span class="k">${i + 1}</span><b>${r.label}</b><span>${r.hint}</span></div>`).join("");
+
+const workInp = $("#set-work"), restInp = $("#set-rest"), voiceInp = $("#set-voice");
+workInp.value = state.settings.work;
+restInp.value = state.settings.rest;
+voiceInp.checked = state.settings.voice;
+workInp.onchange = () => { state.settings.work = Math.min(120, Math.max(15, +workInp.value || 45)); workInp.value = state.settings.work; save(); renderHome(); };
+restInp.onchange = () => { state.settings.rest = Math.min(120, Math.max(5, +restInp.value || 15)); restInp.value = state.settings.rest; save(); renderHome(); };
+voiceInp.onchange = () => { state.settings.voice = voiceInp.checked; save(); };
+
+renderHome();
+</script>
+</body>
+</html>
