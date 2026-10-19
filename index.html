@@ -106,6 +106,12 @@
   .hist { margin-top: 10px; }
   .hist-item { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 0; border-top: 1px solid var(--line); }
   .hist-item .s { font-size: .82rem; color: var(--muted); }
+  .measure-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .measure-form label { display: grid; gap: 4px; font-size: .85rem; color: var(--muted); }
+  .measure-form input { width: 100%; text-align: left; }
+  .deltas { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .m-msg { margin: 8px 0 0; }
+  .m-msg.err { color: var(--accent); font-weight: 600; }
   .del { background: none; border: none; color: var(--muted); font-size: 1.05rem; padding: 6px; cursor: pointer; }
   a { color: var(--accent); }
 
@@ -177,6 +183,19 @@
   <div class="card">
     <div class="week" id="week"></div>
     <div class="hist" id="hist"></div>
+  </div>
+
+  <h2>Mensurations</h2>
+  <div class="card">
+    <div class="measure-form">
+      <label for="m-weight">Poids (lb)<input id="m-weight" type="text" inputmode="decimal" autocomplete="off" placeholder="115"></label>
+      <label for="m-hips">Hanches (po)<input id="m-hips" type="text" inputmode="decimal" autocomplete="off" placeholder="34"></label>
+      <label for="m-waist">Taille (po)<input id="m-waist" type="text" inputmode="decimal" autocomplete="off" placeholder="28"></label>
+    </div>
+    <button id="m-save" class="btn" style="width:100%;margin-top:10px">Enregistrer les mesures</button>
+    <p class="muted m-msg" id="m-msg"></p>
+    <div class="deltas" id="m-deltas"></div>
+    <div class="hist" id="m-list"></div>
   </div>
 
   <h2 id="warm-title">Échauffement · 4 min, sans poids</h2>
@@ -297,7 +316,7 @@ const WARM_SEC = 40, GRAB_SEC = 20;
 // ---------- Storage (fails soft) ----------
 const KEY = "fessiers-halteres-v1";
 function load() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } }
-const state = Object.assign({ history: [], settings: { work: 45, rest: 15, voice: true } }, load());
+const state = Object.assign({ history: [], measures: [], settings: { work: 45, rest: 15, voice: true } }, load());
 function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} }
 
 const $ = s => document.querySelector(s);
@@ -752,7 +771,84 @@ const warmInp = $("#set-warm");
 warmInp.checked = state.settings.warmup !== false;
 warmInp.onchange = () => { state.settings.warmup = warmInp.checked; save(); renderHome(); };
 
+// ---------- Measurements ----------
+// Weight in lb, hips and waist in inches. Each entry may hold any subset of the three.
+const METRICS = [
+  { key: "weight", label: "Poids", unit: "lb", min: 60, max: 400 },
+  { key: "hips", label: "Hanches", unit: "po", min: 15, max: 80 },
+  { key: "waist", label: "Taille", unit: "po", min: 15, max: 80 },
+];
+const fmtNum = n => n.toLocaleString("fr-CA", { maximumFractionDigits: 1 });
+const MEASURE_HINT = "Hanches : à l'endroit le plus large des fessiers. Taille : au plus fin, au-dessus du nombril. "
+  + "Mesure le matin, avant de manger. Le poids chaque semaine, les hanches et la taille chaque mois.";
+
+function renderMeasures() {
+  const list = state.measures;
+  const msg = $("#m-msg");
+  msg.classList.remove("err");
+  const lastFull = list.slice().reverse().find(m => m.hips || m.waist);
+  msg.textContent = lastFull && Date.now() - lastFull.date < 28 * DAY
+    ? `Prochaine mesure des hanches et de la taille vers le ${fmtDate(lastFull.date + 28 * DAY)}`
+    : MEASURE_HINT;
+
+  // Change since the first value of each metric
+  const deltas = METRICS.map(m => {
+    const vals = list.filter(e => e[m.key]);
+    if (vals.length < 2) return "";
+    const d = vals[vals.length - 1][m.key] - vals[0][m.key];
+    return `<span class="chip">${m.label} ${d > 0 ? "+" : d < 0 ? "−" : "±"}${fmtNum(Math.abs(d))} ${m.unit}</span>`;
+  }).join("");
+  $("#m-deltas").innerHTML = deltas
+    ? deltas + `<span class="muted" style="align-self:center">depuis le ${fmtDate(list[0].date)}</span>` : "";
+
+  const box = $("#m-list");
+  box.innerHTML = "";
+  list.slice(-12).reverse().forEach(e => {
+    const row = document.createElement("div");
+    row.className = "hist-item";
+    const parts = METRICS.filter(m => e[m.key]).map(m => `${m.label.toLowerCase()} ${fmtNum(e[m.key])} ${m.unit}`);
+    row.innerHTML = `<div><div>${fmtDate(e.date)}</div><div class="s">${parts.join(" · ")}</div></div>`;
+    const del = document.createElement("button");
+    del.className = "del"; del.textContent = "🗑"; del.setAttribute("aria-label", "Supprimer");
+    del.onclick = async () => {
+      if (await ask("Supprimer ces mesures ?", "Supprimer")) {
+        state.measures.splice(state.measures.indexOf(e), 1); save(); renderMeasures();
+      }
+    };
+    row.appendChild(del);
+    box.appendChild(row);
+  });
+}
+
+$("#m-save").onclick = () => {
+  const entry = { date: Date.now() };
+  const msg = $("#m-msg");
+  for (const m of METRICS) {
+    const raw = $("#m-" + m.key).value.trim().replace(",", ".");
+    if (!raw) continue;
+    const v = parseFloat(raw);
+    if (!(v >= m.min && v <= m.max)) {
+      msg.textContent = `${m.label} : entre ${m.min} et ${m.max} ${m.unit}.`;
+      msg.classList.add("err");
+      return;
+    }
+    entry[m.key] = Math.round(v * 10) / 10;
+  }
+  if (Object.keys(entry).length === 1) {
+    msg.textContent = "Entre au moins une mesure.";
+    msg.classList.add("err");
+    return;
+  }
+  state.measures.push(entry);
+  save();
+  METRICS.forEach(m => { $("#m-" + m.key).value = ""; });
+  renderMeasures();
+  $("#m-save").textContent = "Enregistré ✓";
+  setTimeout(() => { $("#m-save").textContent = "Enregistrer les mesures"; }, 2000);
+};
+
 renderHome();
+renderMeasures();
 </script>
 </body>
 </html>
